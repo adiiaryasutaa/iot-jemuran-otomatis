@@ -18,7 +18,7 @@ struct DeviceConfig {
   int    angle_closed    = 90;
   int    debounce_ms     = 400;
   bool   rain_active_low = true;   // true = sensor LOW saat basah
-  String led_mode        = "solid";
+  char   led_mode[8]     = "solid";  // char[] — hindari heap fragmentation
   int    led_blink_ms    = 500;
 };
 

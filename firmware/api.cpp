@@ -76,7 +76,7 @@ void fetchConfig() {
   if (doc["rain_active"].is<const char*>())
     cfg.rain_active_low = (strcmp(doc["rain_active"], "LOW") == 0);
   if (doc["led_mode"].is<const char*>())
-    cfg.led_mode = doc["led_mode"].as<const char*>();
+    strlcpy(cfg.led_mode, doc["led_mode"].as<const char*>(), sizeof(cfg.led_mode));
 
   Serial.println(F("[Config] diperbarui dari API"));
 }
@@ -87,10 +87,11 @@ void pollCommand() {
 
   JsonDocument doc;
   if (deserializeJson(doc, resp)) return;
-  if (doc.isNull()) return;
+  if (doc.isNull() || !doc["id"].is<long>()) return;
 
   long        id      = doc["id"];
-  const char* command = doc["command"];
+  const char* command = doc["command"] | "";
+  if (strlen(command) == 0) return;
 
   bool targetRaining = (strcmp(command, "close") == 0);
   confirmedRaining   = targetRaining;

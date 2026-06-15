@@ -16,7 +16,7 @@ void updateLed() {
     return;
   }
 
-  if (cfg.led_mode == "solid") {
+  if (strcmp(cfg.led_mode, "solid") == 0) {
     digitalWrite(Pin::LED, HIGH);
     ledState = true;
     return;
