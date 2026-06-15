@@ -1,10 +1,13 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { supabase } from '../lib/supabase'
+import { userAuth } from '../middleware/userAuth'
+import { deviceAuth } from '../middleware/deviceAuth'
 
 const router = Router()
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+// Browser reads logs
+router.get('/', userAuth, async (req: Request, res: Response): Promise<void> => {
   const page  = Math.max(1, Number(req.query.page)  || 1)
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30))
   const from  = (page - 1) * limit
@@ -23,7 +26,8 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   res.json({ data, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } })
 })
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+// ESP32 appends log entries
+router.post('/', deviceAuth, async (req: Request, res: Response): Promise<void> => {
   const { status, servo_angle, source } = req.body
   if (!['hujan', 'cerah'].includes(status)) {
     res.status(400).json({ error: 'status must be "hujan" or "cerah"' }); return

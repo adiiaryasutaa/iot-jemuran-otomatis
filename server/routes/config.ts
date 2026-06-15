@@ -1,17 +1,21 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { supabase } from '../lib/supabase'
+import { anyAuth } from '../middleware/anyAuth'
+import { userAuth } from '../middleware/userAuth'
 
 const router = Router()
 
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+// Both ESP32 (device key) and browser (JWT) fetch config
+router.get('/', anyAuth, async (_req: Request, res: Response): Promise<void> => {
   const { data, error } = await supabase
     .from('device_config').select('*').eq('id', 1).single()
   if (error) { res.status(500).json({ error: error.message }); return }
   res.json(data)
 })
 
-router.put('/', async (req: Request, res: Response): Promise<void> => {
+// Only browser updates config
+router.put('/', userAuth, async (req: Request, res: Response): Promise<void> => {
   const { angle_open, angle_closed, debounce_ms, rain_active, led_mode, led_blink_ms } = req.body
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
 

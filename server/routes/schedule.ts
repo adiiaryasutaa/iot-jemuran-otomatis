@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { supabase } from '../lib/supabase'
+import { userAuth } from '../middleware/userAuth'
 
 const router = Router()
 
-router.get('/', async (_req: Request, res: Response): Promise<void> => {
+router.get('/', userAuth, async (_req: Request, res: Response): Promise<void> => {
   const { data, error } = await supabase
     .from('schedules').select('*')
     .order('hour', { ascending: true }).order('minute', { ascending: true })
@@ -12,7 +13,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
   res.json(data)
 })
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', userAuth, async (req: Request, res: Response): Promise<void> => {
   const { label, action, hour, minute, days = [], is_active = true } = req.body
   if (!label || !action || hour === undefined || minute === undefined) {
     res.status(400).json({ error: 'label, action, hour, and minute are required' }); return
@@ -28,7 +29,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   res.status(201).json(data)
 })
 
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
+router.put('/:id', userAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id)
   if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return }
   const { label, action, hour, minute, days, is_active } = req.body
@@ -45,7 +46,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   res.json(data)
 })
 
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', userAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id)
   if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return }
   const { error } = await supabase.from('schedules').delete().eq('id', id)
@@ -53,7 +54,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   res.status(204).send()
 })
 
-router.patch('/:id/toggle', async (req: Request, res: Response): Promise<void> => {
+router.patch('/:id/toggle', userAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id)
   if (isNaN(id)) { res.status(400).json({ error: 'Invalid ID' }); return }
   const { data: current, error: fetchErr } = await supabase

@@ -1,14 +1,20 @@
+import { supabase } from './supabase'
 import type { Config, LogsResponse, Schedule, Status } from '../types'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string
-const API_KEY  = import.meta.env.VITE_API_KEY as string
+
+async function authHeader(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not authenticated')
+  return `Bearer ${session.access_token}`
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
+      'Authorization': await authHeader(),
       ...init?.headers,
     },
   })
