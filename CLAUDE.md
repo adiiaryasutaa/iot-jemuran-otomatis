@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Rules
+
+- **No hallucinations.** Do not invent APIs, functions, or features. Only reference what exists in actual project files or verified docs.
+- **Clarify ambiguity.** Ask before assuming. Prefer asking many questions over guessing wrong.
+- **Best practices.** Follow framework-specific best practices: React 19, TypeScript, Express 5, Tailwind CSS, Supabase JS SDK.
+
 ## Commands
 
 ```bash

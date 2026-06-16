@@ -1,19 +1,19 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 
 const navItems = [
-  { to: '/',          label: 'Dashboard' },
-  { to: '/schedule',  label: 'Jadwal' },
-  { to: '/config',    label: 'Konfigurasi' },
-  { to: '/logs',      label: 'Riwayat' },
-]
+  { to: "/", label: "Dashboard" },
+  { to: "/schedule", label: "Jadwal" },
+  { to: "/config", label: "Konfigurasi" },
+  { to: "/logs", label: "Riwayat" },
+];
 
 export function Layout() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   async function handleLogout() {
-    await supabase.auth.signOut()
-    navigate('/login', { replace: true })
+    await supabase.auth.signOut();
+    navigate("/login", { replace: true });
   }
 
   return (
@@ -27,12 +27,12 @@ export function Layout() {
                 <NavLink
                   key={to}
                   to={to}
-                  end={to === '/'}
+                  end={to === "/"}
                   className={({ isActive }) =>
                     `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     }`
                   }
                 >
@@ -53,12 +53,10 @@ export function Layout() {
             <NavLink
               key={to}
               to={to}
-              end={to === '/'}
+              end={to === "/"}
               className={({ isActive }) =>
                 `flex-1 py-2 text-xs font-medium text-center transition-colors ${
-                  isActive
-                    ? 'text-blue-700 border-t-2 border-blue-600 -mt-px'
-                    : 'text-gray-500'
+                  isActive ? "text-blue-700 border-t-2 border-blue-600 -mt-px" : "text-gray-500"
                 }`
               }
             >
@@ -71,5 +69,5 @@ export function Layout() {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }

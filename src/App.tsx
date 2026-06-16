@@ -1,11 +1,11 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { Layout } from './components/Layout'
-import { ProtectedRoute } from './components/ProtectedRoute'
-import { Login } from './pages/Login'
-import { Dashboard } from './pages/Dashboard'
-import { ConfigPage } from './pages/Config'
-import { SchedulePage } from './pages/Schedule'
-import { Logs } from './pages/Logs'
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Login } from "./pages/Login";
+import { Dashboard } from "./pages/Dashboard";
+import { ConfigPage } from "./pages/Config";
+import { SchedulePage } from "./pages/Schedule";
+import { Logs } from "./pages/Logs";
 
 export default function App() {
   return (
@@ -22,5 +22,5 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
