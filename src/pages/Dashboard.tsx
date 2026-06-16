@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { usePolling } from "../hooks/usePolling";
+
+const SENSOR_COOLDOWN_MS = 30_000;
 
 function formatWITA(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -10,10 +12,28 @@ function formatWITA(iso: string) {
   }).format(new Date(iso));
 }
 
+function useCooldown(updatedAt: string | undefined) {
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    if (!updatedAt) return;
+    function tick() {
+      const elapsed = Date.now() - new Date(updatedAt!).getTime();
+      setRemaining(Math.max(0, SENSOR_COOLDOWN_MS - elapsed));
+    }
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [updatedAt]);
+
+  return remaining;
+}
+
 export function Dashboard() {
   const { data: status, error } = usePolling(api.getStatus, 3000);
   const [cmdLoading, setCmdLoading] = useState<"open" | "close" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const cooldownMs = useCooldown(status?.updated_at);
 
   async function sendCommand(command: "open" | "close") {
     setCmdLoading(command);
@@ -32,6 +52,8 @@ export function Dashboard() {
   }
 
   const isHujan = status?.status === "hujan";
+  const cooldownSec = Math.ceil(cooldownMs / 1000);
+  const inCooldown = cooldownMs > 0;
 
   return (
     <div className="space-y-4">
@@ -93,9 +115,16 @@ export function Dashboard() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-          Kontrol Manual
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            Kontrol Manual
+          </p>
+          {inCooldown && (
+            <span className="text-xs text-orange-600 font-medium">
+              Sensor cooldown: {cooldownSec}d
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-400 mb-4">
           Perintah akan dieksekusi perangkat dalam ~3 detik. Sensor tetap aktif setelah perintah.
         </p>
@@ -115,6 +144,17 @@ export function Dashboard() {
             {cmdLoading === "close" ? "Mengirim..." : "Tutup Jemuran"}
           </button>
         </div>
+
+        {inCooldown && (
+          <div className="mt-3">
+            <div className="w-full bg-gray-100 rounded-full h-1.5">
+              <div
+                className="bg-orange-400 h-1.5 rounded-full transition-all duration-500"
+                style={{ width: `${(cooldownMs / SENSOR_COOLDOWN_MS) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
