@@ -56,7 +56,7 @@ export function Dashboard() {
           </p>
           {status ? (
             <div className="flex items-center gap-3">
-              <span className={`text-3xl ${isHujan ? "🌧️" : "☀️"}`}>{isHujan ? "🌧️" : "☀️"}</span>
+              <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${isHujan ? "bg-blue-500" : "bg-yellow-400"}`}>{isHujan ? "H" : "C"}</span>
               <div>
                 <p className={`text-xl font-bold ${isHujan ? "text-blue-700" : "text-yellow-600"}`}>
                   {isHujan ? "Hujan" : "Cerah"}
@@ -75,7 +75,7 @@ export function Dashboard() {
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Servo</p>
           {status ? (
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{isHujan ? "🔒" : "🔓"}</span>
+              <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${isHujan ? "bg-red-500" : "bg-green-500"}`}>{isHujan ? "T" : "B"}</span>
               <div>
                 <p className={`text-xl font-bold ${isHujan ? "text-red-600" : "text-green-600"}`}>
                   {isHujan ? "Tertutup" : "Terbuka"}
