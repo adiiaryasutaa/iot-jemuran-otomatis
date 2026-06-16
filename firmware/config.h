@@ -29,3 +29,7 @@ extern bool            ledState;
 extern unsigned long   lastLedToggleMs;
 extern const char*     API_BASE;
 extern const char*     API_KEY;
+extern int             confirmBlinksRemaining;
+extern unsigned long   confirmBlinkDeadlineMs;
+extern bool            confirmBlinkPhase;
+extern bool            manualMode;

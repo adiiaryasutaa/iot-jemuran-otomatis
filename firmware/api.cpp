@@ -68,6 +68,8 @@ void fetchConfig() {
   JsonDocument doc;
   if (deserializeJson(doc, resp)) return;
 
+  DeviceConfig old = cfg;
+
   cfg.angle_open   = doc["angle_open"]   | cfg.angle_open;
   cfg.angle_closed = doc["angle_closed"] | cfg.angle_closed;
   cfg.debounce_ms  = doc["debounce_ms"]  | cfg.debounce_ms;
@@ -78,7 +80,21 @@ void fetchConfig() {
   if (doc["led_mode"].is<const char*>())
     strlcpy(cfg.led_mode, doc["led_mode"].as<const char*>(), sizeof(cfg.led_mode));
 
-  Serial.println(F("[Config] diperbarui dari API"));
+  bool changed = old.angle_open      != cfg.angle_open
+              || old.angle_closed    != cfg.angle_closed
+              || old.debounce_ms     != cfg.debounce_ms
+              || old.led_blink_ms    != cfg.led_blink_ms
+              || old.rain_active_low != cfg.rain_active_low
+              || strcmp(old.led_mode, cfg.led_mode) != 0;
+
+  if (changed) {
+    confirmBlinksRemaining = 3;
+    confirmBlinkDeadlineMs = millis();
+    confirmBlinkPhase      = false;
+    Serial.println(F("[Config] diperbarui — konfirmasi blink"));
+  } else {
+    Serial.println(F("[Config] diperbarui dari API"));
+  }
 }
 
 void pollCommand() {
@@ -95,6 +111,7 @@ void pollCommand() {
 
   bool targetRaining = (strcmp(command, "close") == 0);
   confirmedRaining   = targetRaining;
+  manualMode         = true;
   applyState(confirmedRaining);
   postStatus(confirmedRaining, "manual");
   postLog(confirmedRaining, "manual");

@@ -24,6 +24,7 @@ unsigned long lastLedToggleMs = 0;
 int           confirmBlinksRemaining = 0;
 unsigned long confirmBlinkDeadlineMs = 0;
 bool          confirmBlinkPhase      = false;
+bool          manualMode             = false;
 
 unsigned long lastCommandPollMs   = 0;
 unsigned long lastConfigRefreshMs = 0;
@@ -98,10 +99,13 @@ void loop() {
   }
   if (millis() - lastChangeMs >= (unsigned long)cfg.debounce_ms) {
     if (raw != confirmedRaining) {
-      confirmedRaining = raw;
-      applyState(confirmedRaining);
-      postStatus(confirmedRaining, "auto");
-      postLog(confirmedRaining, "sensor");
+      if (raw) manualMode = false;  // rain always wins, clears manual override
+      if (!manualMode) {
+        confirmedRaining = raw;
+        applyState(confirmedRaining);
+        postStatus(confirmedRaining, "auto");
+        postLog(confirmedRaining, "sensor");
+      }
     }
   }
 
