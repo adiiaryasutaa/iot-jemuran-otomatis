@@ -74,11 +74,17 @@ export function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Servo</p>
           {status ? (
-            <div>
-              <p className="text-3xl font-bold text-gray-900">{status.servo_angle}°</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Mode: <span className="font-medium text-gray-600">{status.mode}</span>
-              </p>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{isHujan ? "🔒" : "🔓"}</span>
+              <div>
+                <p className={`text-xl font-bold ${isHujan ? "text-red-600" : "text-green-600"}`}>
+                  {isHujan ? "Tertutup" : "Terbuka"}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {status.servo_angle}° · Mode:{" "}
+                  <span className="font-medium text-gray-600">{status.mode}</span>
+                </p>
+              </div>
             </div>
           ) : (
             <div className="h-12 bg-gray-100 rounded-lg animate-pulse" />
