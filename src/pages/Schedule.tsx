@@ -1,6 +1,24 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Schedule } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
@@ -22,15 +40,13 @@ const defaultForm = (): ScheduleFormData => ({
   is_active: true,
 });
 
-function Modal({
-  title,
+function ScheduleModal({
   form,
   setForm,
   onSubmit,
   onClose,
   saving,
 }: {
-  title: string;
   form: ScheduleFormData;
   setForm: (f: ScheduleFormData) => void;
   onSubmit: (e: FormEvent) => void;
@@ -47,127 +63,107 @@ function Modal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-lg leading-none"
-          >
-            ×
-          </button>
-        </div>
-        <form onSubmit={onSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Label</label>
-            <input
-              required
-              value={form.label}
-              onChange={(e) => setForm({ ...form, label: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="cth. Buka Pagi"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">Aksi</label>
-            <div className="flex gap-4">
-              {(["open", "close"] as const).map((v) => (
-                <label key={v} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={form.action === v}
-                    onChange={() => setForm({ ...form, action: v })}
-                    className="accent-blue-600"
-                  />
-                  <span className="text-sm text-gray-700">{v === "open" ? "Buka" : "Tutup"}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Waktu (WITA)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                min={0}
-                max={23}
-                value={form.hour}
-                onChange={(e) => setForm({ ...form, hour: Number(e.target.value) })}
-                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="text-gray-400">:</span>
-              <input
-                type="number"
-                min={0}
-                max={59}
-                value={form.minute}
-                onChange={(e) => setForm({ ...form, minute: Number(e.target.value) })}
-                className="w-16 px-3 py-2 border border-gray-300 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">
-              Hari{" "}
-              <span className="text-gray-400 font-normal">
-                {form.days.length === 0 ? "(semua hari)" : ""}
-              </span>
-            </label>
-            <div className="flex gap-1.5 flex-wrap">
-              {DAYS.map((day, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => toggleDay(i)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                    form.days.includes(i)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-            <p className="text-xs text-gray-400 mt-1.5">Kosong = berlaku setiap hari</p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="is_active"
-              checked={form.is_active}
-              onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-              className="accent-blue-600"
-            />
-            <label htmlFor="is_active" className="text-sm text-gray-700">
-              Aktifkan jadwal
-            </label>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2 border border-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {saving ? "Menyimpan..." : "Simpan"}
-            </button>
-          </div>
-        </form>
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="label" className="text-xs">
+          Label
+        </Label>
+        <Input
+          id="label"
+          required
+          value={form.label}
+          onChange={(e) => setForm({ ...form, label: e.target.value })}
+          placeholder="cth. Buka Pagi"
+        />
       </div>
-    </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs">Aksi</Label>
+        <RadioGroup
+          value={form.action}
+          onValueChange={(v) => setForm({ ...form, action: v as "open" | "close" })}
+          className="flex gap-4 grid-cols-none"
+        >
+          {(["open", "close"] as const).map((v) => (
+            <div key={v} className="flex items-center gap-2">
+              <RadioGroupItem value={v} id={`action_${v}`} />
+              <Label htmlFor={`action_${v}`} className="font-normal cursor-pointer">
+                {v === "open" ? "Buka" : "Tutup"}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">Waktu (WITA)</Label>
+        <div className="flex gap-2 items-center">
+          <Input
+            type="number"
+            min={0}
+            max={23}
+            value={form.hour}
+            onChange={(e) => setForm({ ...form, hour: Number(e.target.value) })}
+            className="w-16 text-center"
+          />
+          <span className="text-muted-foreground">:</span>
+          <Input
+            type="number"
+            min={0}
+            max={59}
+            value={form.minute}
+            onChange={(e) => setForm({ ...form, minute: Number(e.target.value) })}
+            className="w-16 text-center"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs">
+          Hari{" "}
+          <span className="text-muted-foreground font-normal">
+            {form.days.length === 0 ? "(semua hari)" : ""}
+          </span>
+        </Label>
+        <div className="flex gap-1.5 flex-wrap">
+          {DAYS.map((day, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => toggleDay(i)}
+              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                form.days.includes(i)
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">Kosong = berlaku setiap hari</p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="is_active"
+          checked={form.is_active}
+          onCheckedChange={(checked) => setForm({ ...form, is_active: checked as boolean })}
+        />
+        <Label htmlFor="is_active" className="font-normal cursor-pointer">
+          Aktifkan jadwal
+        </Label>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+          Batal
+        </Button>
+        <Button type="submit" disabled={saving} className="flex-1">
+          {saving ? "Menyimpan..." : "Simpan"}
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -271,121 +267,131 @@ export function SchedulePage() {
   return (
     <div className="space-y-4">
       {confirmDeleteId !== null && (
-        <div className="rounded-lg px-4 py-3 text-sm bg-red-50 border border-red-200 text-red-700 flex items-center justify-between gap-4">
-          <span>Hapus jadwal ini?</span>
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={executeDelete}
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-md transition-colors"
-            >
-              Ya, Hapus
-            </button>
-            <button
-              onClick={() => setConfirmDeleteId(null)}
-              className="px-3 py-1 border border-red-300 text-red-600 hover:bg-red-100 text-xs font-medium rounded-md transition-colors"
-            >
-              Batal
-            </button>
-          </div>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>Hapus jadwal ini?</span>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="xs"
+                onClick={executeDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Ya, Hapus
+              </Button>
+              <Button size="xs" variant="outline" onClick={() => setConfirmDeleteId(null)}>
+                Batal
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {toast && (
-        <div
-          className={`rounded-lg px-4 py-3 text-sm ${
-            toast.type === "error"
-              ? "bg-red-50 border border-red-200 text-red-700"
-              : "bg-blue-50 border border-blue-200 text-blue-700"
-          }`}
-        >
-          {toast.msg}
-        </div>
+        <Alert variant={toast.type === "error" ? "destructive" : "default"}>
+          <AlertDescription>{toast.msg}</AlertDescription>
+        </Alert>
       )}
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Jadwal</h2>
-        <button
-          onClick={openCreate}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          + Tambah
-        </button>
+        <Button onClick={openCreate}>+ Tambah</Button>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Memuat...</div>
-        ) : schedules.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">Belum ada jadwal</div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {schedules.map((s) => (
-              <div key={s.id} className="flex items-center gap-4 px-4 py-3">
-                <button
-                  onClick={() => handleToggle(s.id)}
-                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors ${
-                    s.is_active ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                  role="switch"
-                  aria-checked={s.is_active}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                      s.is_active ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-medium text-sm ${s.is_active ? "text-gray-900" : "text-gray-400"}`}
-                    >
-                      {s.label}
-                    </span>
-                    <span
-                      className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium ${
-                        s.action === "open"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {s.action === "open" ? "Buka" : "Tutup"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {formatTime(s.hour, s.minute)} · {formatDays(s.days)}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openEdit(s)}
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(s.id)}
-                    className="text-xs text-red-500 hover:underline"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="h-[480px] flex items-center justify-center text-sm text-muted-foreground">
+              Memuat...
+            </div>
+          ) : schedules.length === 0 ? (
+            <div className="h-[480px] flex items-center justify-center text-sm text-muted-foreground">
+              Belum ada jadwal
+            </div>
+          ) : (
+            <div className="h-[480px] overflow-y-auto [&>[data-slot=table-container]]:overflow-x-visible">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-card">
+                  <TableRow>
+                    <TableHead className="w-12">Aktif</TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Tindakan</TableHead>
+                    <TableHead>Waktu</TableHead>
+                    <TableHead>Hari</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schedules.map((s) => (
+                    <TableRow key={s.id} className={s.is_active ? "" : "opacity-50"}>
+                      <TableCell>
+                        <Switch checked={s.is_active} onCheckedChange={() => handleToggle(s.id)} />
+                      </TableCell>
+                      <TableCell className="font-medium">{s.label}</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={
+                            s.action === "open"
+                              ? "bg-green-100 text-green-700 border-transparent"
+                              : "bg-red-100 text-red-700 border-transparent"
+                          }
+                        >
+                          {s.action === "open" ? "Buka" : "Tutup"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatTime(s.hour, s.minute)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {formatDays(s.days)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-3 justify-end">
+                          <Button
+                            variant="link"
+                            size="xs"
+                            onClick={() => openEdit(s)}
+                            className="text-xs text-blue-600 h-auto p-0"
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="xs"
+                            onClick={() => handleDelete(s.id)}
+                            className="text-xs text-red-500 h-auto p-0"
+                          >
+                            Hapus
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {modal !== null && (
-        <Modal
-          title={modal === "create" ? "Tambah Jadwal" : "Edit Jadwal"}
-          form={form}
-          setForm={setForm}
-          onSubmit={handleSubmit}
-          onClose={() => setModal(null)}
-          saving={saving}
-        />
-      )}
+      <Dialog
+        open={modal !== null}
+        onOpenChange={(open) => {
+          if (!open) setModal(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{modal === "create" ? "Tambah Jadwal" : "Edit Jadwal"}</DialogTitle>
+          </DialogHeader>
+          <ScheduleModal
+            form={form}
+            setForm={setForm}
+            onSubmit={handleSubmit}
+            onClose={() => setModal(null)}
+            saving={saving}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

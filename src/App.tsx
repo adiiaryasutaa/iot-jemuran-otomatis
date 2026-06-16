@@ -14,7 +14,13 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
-          <Route element={<StatusProvider><Layout /></StatusProvider>}>
+          <Route
+            element={
+              <StatusProvider>
+                <Layout />
+              </StatusProvider>
+            }
+          >
             <Route index element={<Dashboard />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/schedule" element={<SchedulePage />} />

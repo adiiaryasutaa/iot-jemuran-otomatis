@@ -3,11 +3,12 @@ import type { Request, Response } from "express";
 import { supabase } from "../lib/supabase";
 import { userAuth } from "../middleware/userAuth";
 import { deviceAuth } from "../middleware/deviceAuth";
+import { cooldownGuard } from "../middleware/cooldownGuard";
 
 const router = Router();
 
 // Browser sends manual command
-router.post("/", userAuth, async (req: Request, res: Response): Promise<void> => {
+router.post("/", userAuth, cooldownGuard, async (req: Request, res: Response): Promise<void> => {
   const { command } = req.body;
   if (!["open", "close"].includes(command)) {
     res.status(400).json({ error: 'command must be "open" or "close"' });

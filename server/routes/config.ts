@@ -18,7 +18,16 @@ router.get("/", anyAuth, async (_req: Request, res: Response): Promise<void> => 
 
 // Only browser updates config
 router.put("/", userAuth, async (req: Request, res: Response): Promise<void> => {
-  const { angle_open, angle_closed, debounce_ms, rain_active, led_mode, led_blink_ms } = req.body;
+  const {
+    angle_open,
+    angle_closed,
+    debounce_ms,
+    rain_active,
+    led_mode,
+    led_blink_ms,
+    cooldown_ms,
+    mode,
+  } = req.body;
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
   if (angle_open !== undefined) updates.angle_open = Number(angle_open);
@@ -45,6 +54,21 @@ router.put("/", userAuth, async (req: Request, res: Response): Promise<void> => 
       return;
     }
     updates.led_blink_ms = ms;
+  }
+  if (cooldown_ms !== undefined) {
+    const ms = Number(cooldown_ms);
+    if (ms < 1000 || ms > 600000) {
+      res.status(400).json({ error: "cooldown_ms must be 1000–600000" });
+      return;
+    }
+    updates.cooldown_ms = ms;
+  }
+  if (mode !== undefined) {
+    if (!["auto", "manual"].includes(mode)) {
+      res.status(400).json({ error: 'mode must be "auto" or "manual"' });
+      return;
+    }
+    updates.mode = mode;
   }
 
   const { data, error } = await supabase

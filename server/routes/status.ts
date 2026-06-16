@@ -19,8 +19,10 @@ router.get("/", userAuth, async (_req: Request, res: Response): Promise<void> =>
 // ESP32 reports state
 router.post("/", deviceAuth, async (req: Request, res: Response): Promise<void> => {
   const { status, servo_angle, mode } = req.body;
-  if (!status || servo_angle === undefined || !mode) {
-    res.status(400).json({ error: "status, servo_angle, and mode are required" });
+  if (!["open", "close"].includes(status) || servo_angle === undefined || !mode) {
+    res
+      .status(400)
+      .json({ error: "status must be 'open' or 'close', servo_angle and mode are required" });
     return;
   }
   const { data, error } = await supabase

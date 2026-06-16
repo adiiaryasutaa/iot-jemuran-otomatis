@@ -13,11 +13,9 @@ router.get("/", userAuth, async (req: Request, res: Response): Promise<void> => 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const status = req.query.status as string | undefined;
   const source = req.query.source as string | undefined;
 
   let countQuery = supabase.from("event_logs").select("*", { count: "exact", head: true });
-  if (status === "hujan" || status === "cerah") countQuery = countQuery.eq("status", status);
   if (source === "sensor" || source === "manual" || source === "schedule")
     countQuery = countQuery.eq("source", source);
 
@@ -27,8 +25,11 @@ router.get("/", userAuth, async (req: Request, res: Response): Promise<void> => 
     return;
   }
 
-  let query = supabase.from("event_logs").select("*").order("created_at", { ascending: false }).range(from, to);
-  if (status === "hujan" || status === "cerah") query = query.eq("status", status);
+  let query = supabase
+    .from("event_logs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .range(from, to);
   if (source === "sensor" || source === "manual" || source === "schedule")
     query = query.eq("source", source);
 
@@ -42,13 +43,9 @@ router.get("/", userAuth, async (req: Request, res: Response): Promise<void> => 
   res.json({ data, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } });
 });
 
-// ESP32 appends log entries
+// ESP32 appends log entries (legacy `status` field in body is ignored)
 router.post("/", deviceAuth, async (req: Request, res: Response): Promise<void> => {
-  const { status, servo_angle, source } = req.body;
-  if (!["hujan", "cerah"].includes(status)) {
-    res.status(400).json({ error: 'status must be "hujan" or "cerah"' });
-    return;
-  }
+  const { servo_angle, source } = req.body;
   if (!["sensor", "manual", "schedule"].includes(source)) {
     res.status(400).json({ error: 'source must be "sensor", "manual", or "schedule"' });
     return;
@@ -59,7 +56,7 @@ router.post("/", deviceAuth, async (req: Request, res: Response): Promise<void> 
   }
   const { data, error } = await supabase
     .from("event_logs")
-    .insert({ status, servo_angle: Number(servo_angle), source })
+    .insert({ servo_angle: Number(servo_angle), source })
     .select()
     .single();
   if (error) {

@@ -1,6 +1,6 @@
 #include <ESP32Servo.h>
 #include <WiFi.h>
-#include "credentials.h"   // ← salin dari credentials.h.example, isi nilainya
+#include "credentials.h"  // copy from credentials.h.example and fill in values
 #include "config.h"
 #include "hardware.h"
 #include "api.h"
@@ -10,104 +10,85 @@ const char* WIFI_PASSWORD = WIFI_PASSWORD_VAL;
 const char* API_BASE      = API_BASE_VAL;
 const char* API_KEY       = API_KEY_VAL;
 
-// ─── Definisi global ──────────────────────────────────────────────────────
 DeviceConfig  cfg;
 Servo         canopyServo;
 
 bool          confirmedRaining = false;
 bool          lastRawRaining   = false;
 unsigned long lastChangeMs     = 0;
+bool          ledState         = false;
 
-bool          ledState        = false;
-unsigned long lastLedToggleMs = 0;
-
-int           confirmBlinksRemaining = 0;
-unsigned long confirmBlinkDeadlineMs = 0;
-bool          confirmBlinkPhase      = false;
-bool          manualMode             = false;
-unsigned long lastStateChangeMs      = 0;
-
+unsigned long lastStateChangeMs   = 0;
 unsigned long lastCommandPollMs   = 0;
 unsigned long lastConfigRefreshMs = 0;
 
-// ─── Setup ────────────────────────────────────────────────────────────────
+// Moves servo, updates state, and reports to API.
+static void triggerState(bool isRaining, const char* statusMode, const char* logSource) {
+  confirmedRaining  = isRaining;
+  lastStateChangeMs = millis();
+  applyState(isRaining);
+  postStatus(isRaining, statusMode);
+  postLog(isRaining, logSource);
+}
+
 void setup() {
   Serial.begin(115200);
   delay(200);
 
   pinMode(Pin::RAIN_SENSOR, INPUT);
   pinMode(Pin::LED, OUTPUT);
-
   canopyServo.setPeriodHertz(50);
   canopyServo.attach(Pin::SERVO, 500, 2400);
 
-  Serial.print(F("Menghubungkan ke WiFi"));
-
+  // Phase 1: connect WiFi — fast blink until connected
+  Serial.print(F("Connecting to WiFi..."));
   WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-  delay(100);
-  Serial.println(F("Scan jaringan..."));
-  int n = WiFi.scanNetworks();
-  for (int i = 0; i < n; i++) {
-    Serial.print(WiFi.SSID(i));
-    Serial.print(F("  RSSI: "));
-    Serial.print(WiFi.RSSI(i));
-    Serial.print(F("  Band: "));
-    Serial.println(WiFi.channel(i) > 13 ? F("5GHz") : F("2.4GHz"));
-  }
-  Serial.println(F("---"));
-
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
-    Serial.print('.');
-    attempts++;
+
+  while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(Pin::LED, HIGH); delay(100);
+    digitalWrite(Pin::LED, LOW);  delay(100);
   }
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println(F("\nGAGAL konek! Cek SSID/password/band 2.4GHz"));
-  } else {
-    Serial.print(F("\nTerhubung, IP: "));
-    Serial.println(WiFi.localIP());
+  digitalWrite(Pin::LED, LOW);
+
+  delay(500); // let WiFi stack stabilise before first HTTP call
+
+  Serial.print(F("\nIP: "));
+  Serial.println(WiFi.localIP());
+
+  // Phase 2: fetch config — slow blink, retry until success
+  Serial.println(F("Fetching config..."));
+
+  while (!fetchConfig()) {
+    Serial.println(F("[Config] failed, retrying..."));
+    digitalWrite(Pin::LED, HIGH); delay(500);
+    digitalWrite(Pin::LED, LOW);  delay(500);
   }
+  digitalWrite(Pin::LED, LOW);
 
-  // Serial.print(F("Menghubungkan ke WiFi"));
-  // WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  // while (WiFi.status() != WL_CONNECTED) {
-  //   delay(500);
-  //   Serial.print('.');
-  // }
-  // Serial.print(F("\nTerhubung, IP: "));
-  // Serial.println(WiFi.localIP());
-
-  fetchConfig();
-
-  confirmedRaining = readRainRaw();
-  applyState(confirmedRaining);
-  postStatus(confirmedRaining, "auto");
-  postLog(confirmedRaining, "sensor");
-
-  Serial.println(F("=== Jemuran Otomatis ==="));
+  // Phase 3: read initial sensor state and sync to API
+  triggerState(readRainRaw(), "auto", "sensor");
+  Serial.println(F("=== Ready ==="));
 }
 
-// ─── Loop ─────────────────────────────────────────────────────────────────
 void loop() {
-  // Debounce sensor hujan
+  // Sensor debounce: only act after signal is stable for debounce_ms
   bool raw = readRainRaw();
   if (raw != lastRawRaining) {
     lastRawRaining = raw;
     lastChangeMs   = millis();
   }
-  if (millis() - lastChangeMs >= (unsigned long)cfg.debounce_ms) {
-    if (raw != confirmedRaining) {
-      if (raw) manualMode = false;  // rain always wins, clears manual override
-      if (!manualMode && millis() - lastStateChangeMs >= SENSOR_COOLDOWN_MS) {
-        confirmedRaining    = raw;
-        lastStateChangeMs   = millis();
-        applyState(confirmedRaining);
-        postStatus(confirmedRaining, "auto");
-        postLog(confirmedRaining, "sensor");
-      }
+
+  if (millis() - lastChangeMs >= (unsigned long)cfg.debounce_ms && raw != confirmedRaining) {
+    bool isManual = (strcmp(cfg.mode, "manual") == 0);
+
+    if (isManual) {
+      // Manual mode: sensor only closes on rain (safety). User opens manually.
+      if (raw) triggerState(true, "auto", "sensor");
+    } else {
+      // Auto mode: sensor fully governs, cooldown prevents rapid toggling.
+      if (millis() - lastStateChangeMs >= SENSOR_COOLDOWN_MS)
+        triggerState(raw, "auto", "sensor");
     }
   }
 

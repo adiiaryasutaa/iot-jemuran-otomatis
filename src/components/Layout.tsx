@@ -1,6 +1,8 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useStatus } from "../context/StatusContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
@@ -45,16 +47,13 @@ export function Layout() {
           </div>
           <div className="flex items-center gap-3">
             {inCooldown && (
-              <span className="text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded-full">
+              <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50">
                 Cooldown {cooldownSec}d
-              </span>
+              </Badge>
             )}
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
               Keluar
-            </button>
+            </Button>
           </div>
         </div>
         <nav className="sm:hidden flex border-t border-gray-100">

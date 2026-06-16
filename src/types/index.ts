@@ -1,6 +1,6 @@
 export interface Status {
   id: number;
-  status: "hujan" | "cerah";
+  status: "open" | "close";
   servo_angle: number;
   mode: "auto" | "manual";
   updated_at: string;
@@ -14,13 +14,14 @@ export interface Config {
   rain_active: "LOW" | "HIGH";
   led_mode: "solid" | "blink";
   led_blink_ms: number;
+  cooldown_ms: number;
+  mode: "auto" | "manual";
   updated_at: string;
 }
 
 export interface Log {
   id: number;
   created_at: string;
-  status: "hujan" | "cerah";
   servo_angle: number;
   source: "sensor" | "manual" | "schedule";
 }

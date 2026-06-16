@@ -37,9 +37,8 @@ export const api = {
   postCommand: (command: "open" | "close") =>
     request("/api/command", { method: "POST", body: JSON.stringify({ command }) }),
 
-  getLogs: (page = 1, limit = 30, status?: string, source?: string) => {
+  getLogs: (page = 1, limit = 30, source?: string) => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
-    if (status) params.set("status", status);
     if (source) params.set("source", source);
     return request<LogsResponse>(`/api/logs?${params}`);
   },

@@ -109,14 +109,10 @@ router.get("/run", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const matched = (schedules ?? []).filter(
-    (s) => s.days.length === 0 || s.days.includes(day),
-  );
+  const matched = (schedules ?? []).filter((s) => s.days.length === 0 || s.days.includes(day));
 
   await Promise.all(
-    matched.map((s) =>
-      supabase.from("commands").insert({ command: s.action, source: "schedule" }),
-    ),
+    matched.map((s) => supabase.from("commands").insert({ command: s.action, source: "schedule" })),
   );
 
   res.json({ fired: matched.length, labels: matched.map((s) => s.label) });

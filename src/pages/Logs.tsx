@@ -1,6 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Log, LogsResponse } from "../types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function formatWITA(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -10,13 +28,20 @@ function formatWITA(iso: string) {
   }).format(new Date(iso));
 }
 
-const sourceBadge: Record<Log["source"], string> = {
-  sensor: "bg-blue-100 text-blue-700",
-  manual: "bg-orange-100 text-orange-700",
-  schedule: "bg-green-100 text-green-700",
+const sourceBadgeClass: Record<Log["source"], string> = {
+  sensor: "bg-blue-100 text-blue-700 border-transparent",
+  manual: "bg-orange-100 text-orange-700 border-transparent",
+  schedule: "bg-green-100 text-green-700 border-transparent",
 };
 
 const sourceLabel: Record<Log["source"], string> = {
+  sensor: "Sensor",
+  manual: "Manual",
+  schedule: "Jadwal",
+};
+
+const sourceFilterLabel: Record<string, string> = {
+  _all: "Semua Status",
   sensor: "Sensor",
   manual: "Manual",
   schedule: "Jadwal",
@@ -26,24 +51,22 @@ export function Logs() {
   const [result, setResult] = useState<LogsResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState("");
   const [filterSource, setFilterSource] = useState("");
 
   const load = useCallback(() => {
     setLoading(true);
     api
-      .getLogs(page, 30, filterStatus || undefined, filterSource || undefined)
+      .getLogs(page, 30, filterSource || undefined)
       .then(setResult)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page, filterStatus, filterSource]);
+  }, [page, filterSource]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  function applyFilter(status: string, source: string) {
-    setFilterStatus(status);
+  function applyFilter(source: string) {
     setFilterSource(source);
     setPage(1);
   }
@@ -54,119 +77,100 @@ export function Logs() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Riwayat</h2>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
-        >
+        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           {loading ? "Memuat..." : "Refresh"}
-        </button>
+        </Button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <select
-          value={filterStatus}
-          onChange={(e) => applyFilter(e.target.value, filterSource)}
-          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <Select
+          value={filterSource || "_all"}
+          onValueChange={(v) => applyFilter(v != null && v !== "_all" ? v : "")}
         >
-          <option value="">Semua Status</option>
-          <option value="hujan">Hujan</option>
-          <option value="cerah">Cerah</option>
-        </select>
+          <SelectTrigger size="sm" className="w-auto">
+            <SelectValue>{(v) => sourceFilterLabel[v as string] ?? "Semua Status"}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">Semua Status</SelectItem>
+            <SelectItem value="sensor">Sensor</SelectItem>
+            <SelectItem value="manual">Manual</SelectItem>
+            <SelectItem value="schedule">Jadwal</SelectItem>
+          </SelectContent>
+        </Select>
 
-        <select
-          value={filterSource}
-          onChange={(e) => applyFilter(filterStatus, e.target.value)}
-          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Semua Sumber</option>
-          <option value="sensor">Sensor</option>
-          <option value="manual">Manual</option>
-          <option value="schedule">Jadwal</option>
-        </select>
-
-        {(filterStatus || filterSource) && (
-          <button
-            onClick={() => applyFilter("", "")}
-            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500 transition-colors"
-          >
+        {filterSource && (
+          <Button variant="outline" size="sm" onClick={() => applyFilter("")}>
             Reset Filter
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Memuat...</div>
-        ) : !result || result.data.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">Belum ada riwayat</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Waktu (WITA)</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Sudut</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Sumber</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {result.data.map((log) => (
-                  <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                      {formatWITA(log.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          log.status === "hujan"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
-                      >
-                        {log.status === "hujan" ? "Hujan" : "Cerah"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{log.servo_angle}°</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${sourceBadge[log.source]}`}
-                      >
-                        {sourceLabel[log.source]}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {result && totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <span className="text-xs text-gray-400">
-              Halaman {page} dari {totalPages} ({result.pagination.total} data)
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 text-xs border border-gray-200 rounded-md disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              >
-                ← Sebelumnya
-              </button>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1 text-xs border border-gray-200 rounded-md disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              >
-                Selanjutnya →
-              </button>
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="h-[480px] flex items-center justify-center text-sm text-muted-foreground">
+              Memuat...
             </div>
-          </div>
-        )}
-      </div>
+          ) : !result || result.data.length === 0 ? (
+            <div className="h-[480px] flex items-center justify-center text-sm text-muted-foreground">
+              Belum ada riwayat
+            </div>
+          ) : (
+            <div className="h-[480px] overflow-y-auto [&>[data-slot=table-container]]:overflow-x-visible">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-card">
+                  <TableRow>
+                    <TableHead>Waktu (WITA)</TableHead>
+                    <TableHead>Sudut</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {result.data.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {formatWITA(log.created_at)}
+                      </TableCell>
+                      <TableCell>{log.servo_angle}°</TableCell>
+                      <TableCell>
+                        <Badge className={sourceBadgeClass[log.source]}>
+                          {sourceLabel[log.source]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {result && totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <span className="text-xs text-muted-foreground">
+                Halaman {page} dari {totalPages} ({result.pagination.total} data)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                >
+                  ← Sebelumnya
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                >
+                  Selanjutnya →
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -4,5 +4,5 @@
 
 void postStatus(bool isRaining, const char* mode);
 void postLog(bool isRaining, const char* source);
-void fetchConfig();
+bool fetchConfig(); // returns true on success
 void pollCommand();

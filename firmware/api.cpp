@@ -4,97 +4,96 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-// ─── HTTP helpers ─────────────────────────────────────────────────────────
-
-static String apiGet(const String& path) {
+// Returns response body, or "" on failure.
+static String apiGet(const char* path) {
   if (WiFi.status() != WL_CONNECTED) return "";
+
+  char url[192];
+  snprintf(url, sizeof(url), "%s%s", API_BASE, path);
+  
   HTTPClient http;
-  http.begin(String(API_BASE) + path);
+  http.setTimeout(5000);
+  http.begin(url);
   http.addHeader("x-api-key", API_KEY);
+  
   int code = http.GET();
+  Serial.printf("[GET] %s → %d\n", path, code);
   String body = (code > 0) ? http.getString() : "";
   http.end();
+
   return body;
 }
 
-static bool apiPost(const String& path, const String& body) {
+// POST or PATCH with a JSON body; returns true on 2xx.
+static bool apiSend(const char* method, const char* path, const char* body) {
   if (WiFi.status() != WL_CONNECTED) return false;
+
+  char url[192];
+  snprintf(url, sizeof(url), "%s%s", API_BASE, path);
+  
   HTTPClient http;
-  http.begin(String(API_BASE) + path);
+  http.setTimeout(5000);
+  http.begin(url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-api-key", API_KEY);
-  int code = http.POST(body);
+  
+  int code = http.sendRequest(method, body);
   http.end();
+  
   return code >= 200 && code < 300;
 }
 
-static bool apiPatch(const String& path) {
-  if (WiFi.status() != WL_CONNECTED) return false;
-  HTTPClient http;
-  http.begin(String(API_BASE) + path);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("x-api-key", API_KEY);
-  int code = http.sendRequest("PATCH", "{}");
-  http.end();
-  return code >= 200 && code < 300;
-}
+// Builds {status, servo_angle, <key>:<value>} and POSTs to endpoint.
+static void postEvent(const char* endpoint, bool isRaining, const char* key, const char* value) {
+  JsonDocument doc;
+  doc["status"]      = isRaining ? "close" : "open";
+  doc["servo_angle"] = isRaining ? cfg.angle_closed : cfg.angle_open;
+  doc[key]           = value;
 
-// ─── API calls ────────────────────────────────────────────────────────────
+  char body[96];
+  serializeJson(doc, body, sizeof(body));
+  apiSend("POST", endpoint, body);
+}
 
 void postStatus(bool isRaining, const char* mode) {
-  JsonDocument doc;
-  doc["status"]      = isRaining ? "hujan" : "cerah";
-  doc["servo_angle"] = isRaining ? cfg.angle_closed : cfg.angle_open;
-  doc["mode"]        = mode;
-  String body;
-  serializeJson(doc, body);
-  apiPost("/api/status", body);
+  postEvent("/api/status", isRaining, "mode", mode);
 }
 
 void postLog(bool isRaining, const char* source) {
-  JsonDocument doc;
-  doc["status"]      = isRaining ? "hujan" : "cerah";
-  doc["servo_angle"] = isRaining ? cfg.angle_closed : cfg.angle_open;
-  doc["source"]      = source;
-  String body;
-  serializeJson(doc, body);
-  apiPost("/api/logs", body);
+  postEvent("/api/logs", isRaining, "source", source);
 }
 
-void fetchConfig() {
+bool fetchConfig() {
   String resp = apiGet("/api/config");
-  if (resp.isEmpty()) return;
+  if (resp.isEmpty()) return false;
 
   JsonDocument doc;
-  if (deserializeJson(doc, resp)) return;
+  if (deserializeJson(doc, resp)) return false;
 
   DeviceConfig old = cfg;
 
   cfg.angle_open   = doc["angle_open"]   | cfg.angle_open;
   cfg.angle_closed = doc["angle_closed"] | cfg.angle_closed;
   cfg.debounce_ms  = doc["debounce_ms"]  | cfg.debounce_ms;
-  cfg.led_blink_ms = doc["led_blink_ms"] | cfg.led_blink_ms;
 
-  if (doc["rain_active"].is<const char*>())
+  if (doc["rain_active"].is<const char*>()) {
     cfg.rain_active_low = (strcmp(doc["rain_active"], "LOW") == 0);
-  if (doc["led_mode"].is<const char*>())
-    strlcpy(cfg.led_mode, doc["led_mode"].as<const char*>(), sizeof(cfg.led_mode));
+  }
+
+  if (doc["mode"].is<const char*>()) {
+    strlcpy(cfg.mode, doc["mode"].as<const char*>(), sizeof(cfg.mode));
+  }
 
   bool changed = old.angle_open      != cfg.angle_open
               || old.angle_closed    != cfg.angle_closed
               || old.debounce_ms     != cfg.debounce_ms
-              || old.led_blink_ms    != cfg.led_blink_ms
               || old.rain_active_low != cfg.rain_active_low
-              || strcmp(old.led_mode, cfg.led_mode) != 0;
+              || strcmp(old.mode, cfg.mode) != 0;
 
-  if (changed) {
-    confirmBlinksRemaining = 3;
-    confirmBlinkDeadlineMs = millis();
-    confirmBlinkPhase      = false;
-    Serial.println(F("[Config] diperbarui — konfirmasi blink"));
-  } else {
-    Serial.println(F("[Config] diperbarui dari API"));
-  }
+  Serial.println(changed ? F("[Config] updated") : F("[Config] unchanged"));
+  if (changed) ledSignalConfig();
+
+  return true;
 }
 
 void pollCommand() {
@@ -102,22 +101,22 @@ void pollCommand() {
   if (resp.isEmpty() || resp == "null") return;
 
   JsonDocument doc;
-  if (deserializeJson(doc, resp)) return;
-  if (doc.isNull() || !doc["id"].is<long>()) return;
+  if (deserializeJson(doc, resp) || doc.isNull() || !doc["id"].is<long>()) return;
 
   long        id      = doc["id"];
   const char* command = doc["command"] | "";
-  if (strlen(command) == 0) return;
+
+  if (!strlen(command)) return;
 
   bool targetRaining = (strcmp(command, "close") == 0);
-  confirmedRaining   = targetRaining;
-  manualMode         = true;
-  applyState(confirmedRaining);
-  postStatus(confirmedRaining, "manual");
-  postLog(confirmedRaining, "manual");
+  confirmedRaining = targetRaining;
+  applyState(targetRaining);
+  postStatus(targetRaining, "manual");
+  postLog(targetRaining, "manual");
 
-  apiPatch("/api/command/" + String(id) + "/executed");
+  char path[48];
+  snprintf(path, sizeof(path), "/api/command/%ld/executed", id);
+  apiSend("PATCH", path, "{}");
 
-  Serial.print(F("[Command] eksekusi: "));
-  Serial.println(command);
+  Serial.printf("[Command] %s\n", command);
 }

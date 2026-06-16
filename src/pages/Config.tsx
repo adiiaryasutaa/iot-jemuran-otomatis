@@ -1,17 +1,15 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Config } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
 
-type ConfigDraft = Omit<Config, "id" | "updated_at">;
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
-      {children}
-    </div>
-  );
-}
+type ConfigDraft = Omit<Config, "id" | "updated_at" | "mode">;
 
 export function ConfigPage() {
   const [draft, setDraft] = useState<ConfigDraft | null>(null);
@@ -30,6 +28,7 @@ export function ConfigPage() {
           rain_active: cfg.rain_active,
           led_mode: cfg.led_mode,
           led_blink_ms: cfg.led_blink_ms,
+          cooldown_ms: cfg.cooldown_ms,
         });
         setLoading(false);
       })
@@ -56,149 +55,171 @@ export function ConfigPage() {
   }
 
   if (loading) {
-    return <div className="h-40 bg-gray-100 rounded-xl animate-pulse" />;
+    return <div className="h-40 bg-muted rounded-xl animate-pulse" />;
   }
 
   if (!draft) {
-    return <p className="text-sm text-red-600">Gagal memuat konfigurasi.</p>;
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>Gagal memuat konfigurasi.</AlertDescription>
+      </Alert>
+    );
   }
 
   return (
     <form onSubmit={handleSave} className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Konfigurasi</h2>
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-        >
+        <Button type="submit" disabled={saving}>
           {saving ? "Menyimpan..." : "Simpan"}
-        </button>
+        </Button>
       </div>
 
       {toast && (
-        <div
-          className={`rounded-lg px-4 py-3 text-sm border ${
-            toast.type === "ok"
-              ? "bg-green-50 border-green-200 text-green-700"
-              : "bg-red-50 border-red-200 text-red-700"
-          }`}
-        >
-          {toast.msg}
-        </div>
+        <Alert variant={toast.type === "err" ? "destructive" : "default"}>
+          <AlertDescription>{toast.msg}</AlertDescription>
+        </Alert>
       )}
 
-      <Section title="Servo">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Sudut Terbuka (0–180°)
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={180}
-              value={draft.angle_open}
-              onChange={(e) => set("angle_open", Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+      <Card>
+        <CardContent>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Servo</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="angle_open" className="text-xs">
+                Sudut Terbuka (0–180°)
+              </Label>
+              <Input
+                id="angle_open"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]+"
+                value={draft.angle_open}
+                onChange={(e) => set("angle_open", Number(e.target.value.replace(/[^0-9]/g, "")))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="angle_closed" className="text-xs">
+                Sudut Tertutup (0–180°)
+              </Label>
+              <Input
+                id="angle_closed"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]+"
+                value={draft.angle_closed}
+                onChange={(e) => set("angle_closed", Number(e.target.value.replace(/[^0-9]/g, "")))}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Sudut Tertutup (0–180°)
-            </label>
-            <input
-              type="number"
-              min={0}
-              max={180}
-              value={draft.angle_closed}
-              onChange={(e) => set("angle_closed", Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-      </Section>
+        </CardContent>
+      </Card>
 
-      <Section title="Sensor Hujan">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Debounce (ms)</label>
-            <input
-              type="number"
-              min={0}
-              value={draft.debounce_ms}
-              onChange={(e) => set("debounce_ms", Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <Card>
+        <CardContent>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Sensor Hujan</h3>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="debounce_ms" className="text-xs">
+                Debounce (ms)
+              </Label>
+              <Input
+                id="debounce_ms"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]+"
+                value={draft.debounce_ms}
+                onChange={(e) => set("debounce_ms", Number(e.target.value.replace(/[^0-9]/g, "")))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Durasi sinyal stabil sebelum status berubah
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600">Level aktif saat hujan</p>
+              <RadioGroup
+                value={draft.rain_active}
+                onValueChange={(v) => set("rain_active", v as "LOW" | "HIGH")}
+                className="flex gap-4 grid-cols-none"
+              >
+                {(["LOW", "HIGH"] as const).map((v) => (
+                  <div key={v} className="flex items-center gap-2">
+                    <RadioGroupItem value={v} id={`rain_active_${v}`} />
+                    <Label htmlFor={`rain_active_${v}`} className="font-normal cursor-pointer">
+                      {v}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Kontrol</h3>
+          <div className="space-y-1.5">
+            <Label htmlFor="cooldown_sec" className="text-xs">
+              Cooldown aksi (detik)
+            </Label>
+            <Input
+              id="cooldown_sec"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]+"
+              value={Math.round(draft.cooldown_ms / 1000)}
+              onChange={(e) =>
+                set("cooldown_ms", Number(e.target.value.replace(/[^0-9]/g, "")) * 1000)
+              }
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Durasi sinyal stabil sebelum status berubah
+            <p className="text-xs text-muted-foreground">
+              Jeda setelah aksi/perubahan sebelum perintah berikutnya bisa dikirim
             </p>
           </div>
-          <div>
-            <p className="text-xs font-medium text-gray-600 mb-2">Level aktif saat hujan</p>
-            <div className="flex gap-4">
-              {(["LOW", "HIGH"] as const).map((v) => (
-                <label key={v} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="rain_active"
-                    value={v}
-                    checked={draft.rain_active === v}
-                    onChange={() => set("rain_active", v)}
-                    className="accent-blue-600"
-                  />
-                  <span className="text-sm text-gray-700">{v}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Section>
+        </CardContent>
+      </Card>
 
-      <Section title="LED Indikator">
-        <div className="space-y-4">
-          <div>
-            <p className="text-xs font-medium text-gray-600 mb-2">Mode LED saat aktif (hujan)</p>
-            <div className="flex gap-4">
-              {(["solid", "blink"] as const).map((v) => (
-                <label key={v} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="led_mode"
-                    value={v}
-                    checked={draft.led_mode === v}
-                    onChange={() => set("led_mode", v)}
-                    className="accent-blue-600"
-                  />
-                  <span className="text-sm text-gray-700 capitalize">
-                    {v === "solid" ? "Menyala" : "Berkedip"}
-                  </span>
-                </label>
-              ))}
+      <Card>
+        <CardContent>
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">LED Indikator</h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600">Mode LED saat aktif (hujan)</p>
+              <RadioGroup
+                value={draft.led_mode}
+                onValueChange={(v) => set("led_mode", v as "solid" | "blink")}
+                className="flex gap-4 grid-cols-none"
+              >
+                {(["solid", "blink"] as const).map((v) => (
+                  <div key={v} className="flex items-center gap-2">
+                    <RadioGroupItem value={v} id={`led_mode_${v}`} />
+                    <Label htmlFor={`led_mode_${v}`} className="font-normal cursor-pointer">
+                      {v === "solid" ? "Menyala" : "Berkedip"}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
-          </div>
-          {draft.led_mode === "blink" && (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Kecepatan kedip: {draft.led_blink_ms} ms
-              </label>
-              <input
-                type="range"
-                min={100}
-                max={5000}
-                step={100}
-                value={draft.led_blink_ms}
-                onChange={(e) => set("led_blink_ms", Number(e.target.value))}
-                className="w-full accent-blue-600"
-              />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>Cepat (100 ms)</span>
-                <span>Lambat (5000 ms)</span>
+            {draft.led_mode === "blink" && (
+              <div className="space-y-2">
+                <Label className="text-xs">Kecepatan kedip: {draft.led_blink_ms} ms</Label>
+                <Slider
+                  min={100}
+                  max={5000}
+                  step={100}
+                  value={draft.led_blink_ms}
+                  onValueChange={(v) => set("led_blink_ms", Array.isArray(v) ? v[0] : v)}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Cepat (100 ms)</span>
+                  <span>Lambat (5000 ms)</span>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </Section>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </form>
   );
 }
