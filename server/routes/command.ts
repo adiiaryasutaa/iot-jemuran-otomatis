@@ -25,12 +25,14 @@ router.post("/", userAuth, async (req: Request, res: Response): Promise<void> =>
   res.status(201).json(data);
 });
 
-// ESP32 polls pending command
+// ESP32 polls pending command — ignore commands older than 30s to discard stale queue
 router.get("/pending", deviceAuth, async (_req: Request, res: Response): Promise<void> => {
+  const cutoff = new Date(Date.now() - 30_000).toISOString();
   const { data, error } = await supabase
     .from("commands")
     .select("*")
     .eq("is_executed", false)
+    .gte("created_at", cutoff)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();

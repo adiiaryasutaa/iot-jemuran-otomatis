@@ -11,6 +11,7 @@ namespace Pin {
 // ─── Interval polling ─────────────────────────────────────────────────────
 constexpr unsigned long COMMAND_POLL_INTERVAL   = 3000;   // 3 s
 constexpr unsigned long CONFIG_REFRESH_INTERVAL = 60000;  // 60 s
+constexpr unsigned long SENSOR_COOLDOWN_MS      = 30000;  // 30 s between sensor-triggered state changes
 
 // ─── Konfigurasi aktif (diisi dari API, bisa berubah saat runtime) ────────
 struct DeviceConfig {
@@ -33,3 +34,4 @@ extern int             confirmBlinksRemaining;
 extern unsigned long   confirmBlinkDeadlineMs;
 extern bool            confirmBlinkPhase;
 extern bool            manualMode;
+extern unsigned long   lastStateChangeMs;
