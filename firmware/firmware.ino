@@ -21,6 +21,10 @@ unsigned long lastChangeMs     = 0;
 bool          ledState        = false;
 unsigned long lastLedToggleMs = 0;
 
+int           confirmBlinksRemaining = 0;
+unsigned long confirmBlinkDeadlineMs = 0;
+bool          confirmBlinkPhase      = false;
+
 unsigned long lastCommandPollMs   = 0;
 unsigned long lastConfigRefreshMs = 0;
 
