@@ -177,6 +177,12 @@ export function SchedulePage() {
   const [modal, setModal] = useState<"create" | number | null>(null);
   const [form, setForm] = useState<ScheduleFormData>(defaultForm());
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
+
+  function showToast(msg: string, type: "error" | "success" = "error") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   async function load() {
     setLoading(true);
@@ -221,7 +227,7 @@ export function SchedulePage() {
       setModal(null);
       await load();
     } catch (err) {
-      alert(`Gagal menyimpan: ${err instanceof Error ? err.message : err}`);
+      showToast(`Gagal menyimpan: ${err instanceof Error ? err.message : err}`);
     } finally {
       setSaving(false);
     }
@@ -233,7 +239,7 @@ export function SchedulePage() {
       await api.deleteSchedule(id);
       await load();
     } catch (err) {
-      alert(`Gagal menghapus: ${err instanceof Error ? err.message : err}`);
+      showToast(`Gagal menghapus: ${err instanceof Error ? err.message : err}`);
     }
   }
 
@@ -242,7 +248,7 @@ export function SchedulePage() {
       const updated = await api.toggleSchedule(id);
       setSchedules((prev) => prev.map((s) => (s.id === id ? updated : s)));
     } catch (err) {
-      alert(`Gagal: ${err instanceof Error ? err.message : err}`);
+      showToast(`Gagal: ${err instanceof Error ? err.message : err}`);
     }
   }
 
@@ -257,6 +263,18 @@ export function SchedulePage() {
 
   return (
     <div className="space-y-4">
+      {toast && (
+        <div
+          className={`rounded-lg px-4 py-3 text-sm ${
+            toast.type === "error"
+              ? "bg-red-50 border border-red-200 text-red-700"
+              : "bg-blue-50 border border-blue-200 text-blue-700"
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Jadwal</h2>
         <button
