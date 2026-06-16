@@ -13,19 +13,26 @@ router.get("/", userAuth, async (req: Request, res: Response): Promise<void> => 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { count, error: countErr } = await supabase
-    .from("event_logs")
-    .select("*", { count: "exact", head: true });
+  const status = req.query.status as string | undefined;
+  const source = req.query.source as string | undefined;
+
+  let countQuery = supabase.from("event_logs").select("*", { count: "exact", head: true });
+  if (status === "hujan" || status === "cerah") countQuery = countQuery.eq("status", status);
+  if (source === "sensor" || source === "manual" || source === "schedule")
+    countQuery = countQuery.eq("source", source);
+
+  const { count, error: countErr } = await countQuery;
   if (countErr) {
     res.status(500).json({ error: countErr.message });
     return;
   }
 
-  const { data, error } = await supabase
-    .from("event_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .range(from, to);
+  let query = supabase.from("event_logs").select("*").order("created_at", { ascending: false }).range(from, to);
+  if (status === "hujan" || status === "cerah") query = query.eq("status", status);
+  if (source === "sensor" || source === "manual" || source === "schedule")
+    query = query.eq("source", source);
+
+  const { data, error } = await query;
   if (error) {
     res.status(500).json({ error: error.message });
     return;

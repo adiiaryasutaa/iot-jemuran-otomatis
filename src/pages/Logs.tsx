@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Log, LogsResponse } from "../types";
 
@@ -26,21 +26,74 @@ export function Logs() {
   const [result, setResult] = useState<LogsResponse | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterSource, setFilterSource] = useState("");
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
     api
-      .getLogs(page, 30)
+      .getLogs(page, 30, filterStatus || undefined, filterSource || undefined)
       .then(setResult)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, filterStatus, filterSource]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function applyFilter(status: string, source: string) {
+    setFilterStatus(status);
+    setFilterSource(source);
+    setPage(1);
+  }
 
   const totalPages = result?.pagination.totalPages ?? 1;
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900">Riwayat</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Riwayat</h2>
+        <button
+          onClick={load}
+          disabled={loading}
+          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition-colors"
+        >
+          {loading ? "Memuat..." : "Refresh"}
+        </button>
+      </div>
+
+      <div className="flex gap-2 flex-wrap">
+        <select
+          value={filterStatus}
+          onChange={(e) => applyFilter(e.target.value, filterSource)}
+          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Semua Status</option>
+          <option value="hujan">Hujan</option>
+          <option value="cerah">Cerah</option>
+        </select>
+
+        <select
+          value={filterSource}
+          onChange={(e) => applyFilter(filterStatus, e.target.value)}
+          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Semua Sumber</option>
+          <option value="sensor">Sensor</option>
+          <option value="manual">Manual</option>
+          <option value="schedule">Jadwal</option>
+        </select>
+
+        {(filterStatus || filterSource) && (
+          <button
+            onClick={() => applyFilter("", "")}
+            className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-500 transition-colors"
+          >
+            Reset Filter
+          </button>
+        )}
+      </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading ? (
