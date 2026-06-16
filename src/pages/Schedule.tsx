@@ -88,7 +88,7 @@ function Modal({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Waktu (WIB)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Waktu (WITA)</label>
             <div className="flex gap-2 items-center">
               <input
                 type="number"

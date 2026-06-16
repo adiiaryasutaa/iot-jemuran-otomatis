@@ -2,9 +2,9 @@ import { useState } from "react";
 import { api } from "../lib/api";
 import { usePolling } from "../hooks/usePolling";
 
-function formatWIB(iso: string) {
+function formatWITA(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Jakarta",
+    timeZone: "Asia/Makassar",
     dateStyle: "medium",
     timeStyle: "medium",
   }).format(new Date(iso));
@@ -62,7 +62,7 @@ export function Dashboard() {
                   {isHujan ? "Hujan" : "Cerah"}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Diperbarui {formatWIB(status.updated_at)}
+                  Diperbarui {formatWITA(status.updated_at)}
                 </p>
               </div>
             </div>

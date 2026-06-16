@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import type { Log, LogsResponse } from "../types";
 
-function formatWIB(iso: string) {
+function formatWITA(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {
-    timeZone: "Asia/Jakarta",
+    timeZone: "Asia/Makassar",
     dateStyle: "short",
     timeStyle: "medium",
   }).format(new Date(iso));
@@ -52,7 +52,7 @@ export function Logs() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Waktu (WIB)</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Waktu (WITA)</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Sudut</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Sumber</th>
@@ -62,7 +62,7 @@ export function Logs() {
                 {result.data.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                      {formatWIB(log.created_at)}
+                      {formatWITA(log.created_at)}
                     </td>
                     <td className="px-4 py-3">
                       <span
