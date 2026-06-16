@@ -81,6 +81,47 @@ router.delete("/:id", userAuth, async (req: Request, res: Response): Promise<voi
   res.status(204).send();
 });
 
+// Called by Vercel Cron every minute — fires schedules matching current WITA time
+router.get("/run", async (req: Request, res: Response): Promise<void> => {
+  const auth = req.headers["authorization"];
+  const secret = process.env.CRON_SECRET;
+  if (!secret || auth !== `Bearer ${secret}`) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  // WITA = UTC+8
+  const now = new Date();
+  const wita = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const hour = wita.getUTCHours();
+  const minute = wita.getUTCMinutes();
+  const day = wita.getUTCDay(); // 0=Sun … 6=Sat
+
+  const { data: schedules, error } = await supabase
+    .from("schedules")
+    .select("*")
+    .eq("is_active", true)
+    .eq("hour", hour)
+    .eq("minute", minute);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const matched = (schedules ?? []).filter(
+    (s) => s.days.length === 0 || s.days.includes(day),
+  );
+
+  await Promise.all(
+    matched.map((s) =>
+      supabase.from("commands").insert({ command: s.action, source: "schedule" }),
+    ),
+  );
+
+  res.json({ fired: matched.length, labels: matched.map((s) => s.label) });
+});
+
 router.patch("/:id/toggle", userAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
