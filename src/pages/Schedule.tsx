@@ -178,6 +178,7 @@ export function SchedulePage() {
   const [form, setForm] = useState<ScheduleFormData>(defaultForm());
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   function showToast(msg: string, type: "error" | "success" = "error") {
     setToast({ msg, type });
@@ -233,8 +234,14 @@ export function SchedulePage() {
     }
   }
 
-  async function handleDelete(id: number) {
-    if (!confirm("Hapus jadwal ini?")) return;
+  function handleDelete(id: number) {
+    setConfirmDeleteId(id);
+  }
+
+  async function executeDelete() {
+    if (confirmDeleteId === null) return;
+    const id = confirmDeleteId;
+    setConfirmDeleteId(null);
     try {
       await api.deleteSchedule(id);
       await load();
@@ -263,6 +270,26 @@ export function SchedulePage() {
 
   return (
     <div className="space-y-4">
+      {confirmDeleteId !== null && (
+        <div className="rounded-lg px-4 py-3 text-sm bg-red-50 border border-red-200 text-red-700 flex items-center justify-between gap-4">
+          <span>Hapus jadwal ini?</span>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={executeDelete}
+              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-md transition-colors"
+            >
+              Ya, Hapus
+            </button>
+            <button
+              onClick={() => setConfirmDeleteId(null)}
+              className="px-3 py-1 border border-red-300 text-red-600 hover:bg-red-100 text-xs font-medium rounded-md transition-colors"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div
           className={`rounded-lg px-4 py-3 text-sm ${
