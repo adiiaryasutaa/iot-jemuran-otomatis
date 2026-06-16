@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { StatusProvider } from "./context/StatusContext";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { ConfigPage } from "./pages/Config";
@@ -13,7 +14,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
+          <Route element={<StatusProvider><Layout /></StatusProvider>}>
             <Route index element={<Dashboard />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/schedule" element={<SchedulePage />} />

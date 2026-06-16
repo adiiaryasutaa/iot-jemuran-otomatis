@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useStatus } from "../context/StatusContext";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
@@ -10,6 +11,7 @@ const navItems = [
 
 export function Layout() {
   const navigate = useNavigate();
+  const { inCooldown, cooldownSec } = useStatus();
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -41,12 +43,19 @@ export function Layout() {
               ))}
             </nav>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            Keluar
-          </button>
+          <div className="flex items-center gap-3">
+            {inCooldown && (
+              <span className="text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 px-2 py-1 rounded-full">
+                Cooldown {cooldownSec}d
+              </span>
+            )}
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              Keluar
+            </button>
+          </div>
         </div>
         <nav className="sm:hidden flex border-t border-gray-100">
           {navItems.map(({ to, label }) => (

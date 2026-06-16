@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { api } from "../lib/api";
-import { usePolling } from "../hooks/usePolling";
-
-const SENSOR_COOLDOWN_MS = 30_000;
+import { useStatus, SENSOR_COOLDOWN_MS } from "../context/StatusContext";
 
 function formatWITA(iso: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -12,28 +10,10 @@ function formatWITA(iso: string) {
   }).format(new Date(iso));
 }
 
-function useCooldown(updatedAt: string | undefined) {
-  const [remaining, setRemaining] = useState(0);
-
-  useEffect(() => {
-    if (!updatedAt) return;
-    function tick() {
-      const elapsed = Date.now() - new Date(updatedAt!).getTime();
-      setRemaining(Math.max(0, SENSOR_COOLDOWN_MS - elapsed));
-    }
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, [updatedAt]);
-
-  return remaining;
-}
-
 export function Dashboard() {
-  const { data: status, error } = usePolling(api.getStatus, 3000);
+  const { status, error, inCooldown, cooldownMs, cooldownSec } = useStatus();
   const [cmdLoading, setCmdLoading] = useState<"open" | "close" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const cooldownMs = useCooldown(status?.updated_at);
 
   async function sendCommand(command: "open" | "close") {
     setCmdLoading(command);
@@ -52,8 +32,7 @@ export function Dashboard() {
   }
 
   const isHujan = status?.status === "hujan";
-  const cooldownSec = Math.ceil(cooldownMs / 1000);
-  const inCooldown = cooldownMs > 0;
+  const buttonsDisabled = cmdLoading !== null || inCooldown;
 
   return (
     <div className="space-y-4">
@@ -78,7 +57,9 @@ export function Dashboard() {
           </p>
           {status ? (
             <div className="flex items-center gap-3">
-              <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${isHujan ? "bg-blue-500" : "bg-yellow-400"}`}>{isHujan ? "H" : "C"}</span>
+              <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${isHujan ? "bg-blue-500" : "bg-yellow-400"}`}>
+                {isHujan ? "H" : "C"}
+              </span>
               <div>
                 <p className={`text-xl font-bold ${isHujan ? "text-blue-700" : "text-yellow-600"}`}>
                   {isHujan ? "Hujan" : "Cerah"}
@@ -97,7 +78,9 @@ export function Dashboard() {
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Servo</p>
           {status ? (
             <div className="flex items-center gap-3">
-              <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${isHujan ? "bg-red-500" : "bg-green-500"}`}>{isHujan ? "T" : "B"}</span>
+              <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white ${isHujan ? "bg-red-500" : "bg-green-500"}`}>
+                {isHujan ? "T" : "B"}
+              </span>
               <div>
                 <p className={`text-xl font-bold ${isHujan ? "text-red-600" : "text-green-600"}`}>
                   {isHujan ? "Tertutup" : "Terbuka"}
@@ -125,28 +108,9 @@ export function Dashboard() {
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-400 mb-4">
-          Perintah akan dieksekusi perangkat dalam ~3 detik. Sensor tetap aktif setelah perintah.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={() => sendCommand("open")}
-            disabled={cmdLoading !== null}
-            className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {cmdLoading === "open" ? "Mengirim..." : "Buka Jemuran"}
-          </button>
-          <button
-            onClick={() => sendCommand("close")}
-            disabled={cmdLoading !== null}
-            className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {cmdLoading === "close" ? "Mengirim..." : "Tutup Jemuran"}
-          </button>
-        </div>
 
         {inCooldown && (
-          <div className="mt-3">
+          <div className="mb-3">
             <div className="w-full bg-gray-100 rounded-full h-1.5">
               <div
                 className="bg-orange-400 h-1.5 rounded-full transition-all duration-500"
@@ -155,6 +119,29 @@ export function Dashboard() {
             </div>
           </div>
         )}
+
+        <p className="text-xs text-gray-400 mb-4">
+          {inCooldown
+            ? `Sensor sedang cooldown. Tombol aktif dalam ${cooldownSec} detik.`
+            : "Perintah akan dieksekusi perangkat dalam ~3 detik."}
+        </p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => sendCommand("open")}
+            disabled={buttonsDisabled}
+            className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {cmdLoading === "open" ? "Mengirim..." : "Buka Jemuran"}
+          </button>
+          <button
+            onClick={() => sendCommand("close")}
+            disabled={buttonsDisabled}
+            className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {cmdLoading === "close" ? "Mengirim..." : "Tutup Jemuran"}
+          </button>
+        </div>
       </div>
     </div>
   );
