@@ -1,25 +1,8 @@
-import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { useAuth } from "../context/AuthContext";
 
 export function ProtectedRoute() {
-  const [loading, setLoading] = useState(true);
-  const [authed, setAuthed] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setAuthed(!!data.session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthed(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { session, loading } = useAuth();
 
   if (loading) {
     return (
@@ -29,5 +12,5 @@ export function ProtectedRoute() {
     );
   }
 
-  return authed ? <Outlet /> : <Navigate to="/login" replace />;
+  return session ? <Outlet /> : <Navigate to="/login" replace />;
 }

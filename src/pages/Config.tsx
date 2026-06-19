@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import type { Config } from "../types";
 import { Button } from "@/components/ui/button";
@@ -7,15 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
 
-type ConfigDraft = Omit<Config, "id" | "updated_at" | "mode">;
+type ConfigDraft = Omit<Config, "id" | "updated_at" | "mode" | "led_mode" | "led_blink_ms">;
 
 export function ConfigPage() {
   const [draft, setDraft] = useState<ConfigDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
   useEffect(() => {
     api
@@ -26,8 +25,6 @@ export function ConfigPage() {
           angle_closed: cfg.angle_closed,
           debounce_ms: cfg.debounce_ms,
           rain_active: cfg.rain_active,
-          led_mode: cfg.led_mode,
-          led_blink_ms: cfg.led_blink_ms,
           cooldown_ms: cfg.cooldown_ms,
         });
         setLoading(false);
@@ -45,12 +42,11 @@ export function ConfigPage() {
     setSaving(true);
     try {
       await api.putConfig(draft);
-      setToast({ msg: "Konfigurasi disimpan — perangkat memperbarui dalam ~60 detik", type: "ok" });
+      toast.success("Konfigurasi disimpan — perangkat memperbarui dalam ~60 detik");
     } catch (err) {
-      setToast({ msg: `Gagal: ${err instanceof Error ? err.message : "error"}`, type: "err" });
+      toast.error(`Gagal: ${err instanceof Error ? err.message : "error"}`);
     } finally {
       setSaving(false);
-      setTimeout(() => setToast(null), 5000);
     }
   }
 
@@ -74,12 +70,6 @@ export function ConfigPage() {
           {saving ? "Menyimpan..." : "Simpan"}
         </Button>
       </div>
-
-      {toast && (
-        <Alert variant={toast.type === "err" ? "destructive" : "default"}>
-          <AlertDescription>{toast.msg}</AlertDescription>
-        </Alert>
-      )}
 
       <Card>
         <CardContent>
@@ -180,46 +170,6 @@ export function ConfigPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent>
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">LED Indikator</h3>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-600">Mode LED saat aktif (hujan)</p>
-              <RadioGroup
-                value={draft.led_mode}
-                onValueChange={(v) => set("led_mode", v as "solid" | "blink")}
-                className="flex gap-4 grid-cols-none"
-              >
-                {(["solid", "blink"] as const).map((v) => (
-                  <div key={v} className="flex items-center gap-2">
-                    <RadioGroupItem value={v} id={`led_mode_${v}`} />
-                    <Label htmlFor={`led_mode_${v}`} className="font-normal cursor-pointer">
-                      {v === "solid" ? "Menyala" : "Berkedip"}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-            {draft.led_mode === "blink" && (
-              <div className="space-y-2">
-                <Label className="text-xs">Kecepatan kedip: {draft.led_blink_ms} ms</Label>
-                <Slider
-                  min={100}
-                  max={5000}
-                  step={100}
-                  value={draft.led_blink_ms}
-                  onValueChange={(v) => set("led_blink_ms", Array.isArray(v) ? v[0] : v)}
-                />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Cepat (100 ms)</span>
-                  <span>Lambat (5000 ms)</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
     </form>
   );
 }

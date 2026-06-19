@@ -1,31 +1,26 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
+import { NavLink, Outlet } from "react-router-dom";
 import { useStatus } from "../context/StatusContext";
-import { Button } from "@/components/ui/button";
+import { UserDropdown } from "./UserDropdown";
 import { Badge } from "@/components/ui/badge";
+import { Toaster } from "@/components/ui/sonner";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
   { to: "/schedule", label: "Jadwal" },
   { to: "/config", label: "Konfigurasi" },
   { to: "/logs", label: "Riwayat" },
+  { to: "/users", label: "Pengguna" },
 ];
 
 export function Layout() {
-  const navigate = useNavigate();
   const { inCooldown, cooldownSec } = useStatus();
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    navigate("/login", { replace: true });
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <span className="font-semibold text-gray-900">Jemuran Otomatis</span>
+            <span className="font-semibold text-gray-900">{import.meta.env.VITE_APP_NAME}</span>
             <nav className="hidden sm:flex gap-1">
               {navItems.map(({ to, label }) => (
                 <NavLink
@@ -51,9 +46,7 @@ export function Layout() {
                 Cooldown {cooldownSec}d
               </Badge>
             )}
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              Keluar
-            </Button>
+            <UserDropdown />
           </div>
         </div>
         <nav className="sm:hidden flex border-t border-gray-100">
@@ -76,6 +69,7 @@ export function Layout() {
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6">
         <Outlet />
       </main>
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }

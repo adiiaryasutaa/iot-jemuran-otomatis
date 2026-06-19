@@ -14,10 +14,14 @@ router.get("/", userAuth, async (req: Request, res: Response): Promise<void> => 
   const to = from + limit - 1;
 
   const source = req.query.source as string | undefined;
+  const dateFrom = req.query.date_from as string | undefined;
+  const dateTo = req.query.date_to as string | undefined;
 
   let countQuery = supabase.from("event_logs").select("*", { count: "exact", head: true });
   if (source === "sensor" || source === "manual" || source === "schedule")
     countQuery = countQuery.eq("source", source);
+  if (dateFrom) countQuery = countQuery.gte("created_at", dateFrom);
+  if (dateTo) countQuery = countQuery.lte("created_at", dateTo);
 
   const { count, error: countErr } = await countQuery;
   if (countErr) {
@@ -32,6 +36,8 @@ router.get("/", userAuth, async (req: Request, res: Response): Promise<void> => 
     .range(from, to);
   if (source === "sensor" || source === "manual" || source === "schedule")
     query = query.eq("source", source);
+  if (dateFrom) query = query.gte("created_at", dateFrom);
+  if (dateTo) query = query.lte("created_at", dateTo);
 
   const { data, error } = await query;
   if (error) {

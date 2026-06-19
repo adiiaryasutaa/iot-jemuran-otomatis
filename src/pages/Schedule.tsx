@@ -1,4 +1,7 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import type { Schedule } from "../types";
 import { Button } from "@/components/ui/button";
@@ -7,18 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DataTable } from "@/components/ui/data-table";
 
 const DAYS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
@@ -39,6 +40,15 @@ const defaultForm = (): ScheduleFormData => ({
   days: [],
   is_active: true,
 });
+
+function formatTime(h: number, m: number) {
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function formatDays(days: number[]) {
+  if (days.length === 0) return "Setiap hari";
+  return days.map((d) => DAYS[d]).join(", ");
+}
 
 function ScheduleModal({
   form,
@@ -131,7 +141,7 @@ function ScheduleModal({
               key={i}
               type="button"
               onClick={() => toggleDay(i)}
-              className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              className={`cursor-pointer px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                 form.days.includes(i)
                   ? "bg-primary text-primary-foreground border-primary"
                   : "border-border text-muted-foreground hover:bg-muted"
@@ -142,17 +152,6 @@ function ScheduleModal({
           ))}
         </div>
         <p className="text-xs text-muted-foreground">Kosong = berlaku setiap hari</p>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="is_active"
-          checked={form.is_active}
-          onCheckedChange={(checked) => setForm({ ...form, is_active: checked as boolean })}
-        />
-        <Label htmlFor="is_active" className="font-normal cursor-pointer">
-          Aktifkan jadwal
-        </Label>
       </div>
 
       <div className="flex gap-3 pt-2">
@@ -168,18 +167,40 @@ function ScheduleModal({
 }
 
 export function SchedulePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<"create" | number | null>(null);
+
+  const filterAction = searchParams.get("action") ?? "";
+  const filterStatus = searchParams.get("status") ?? "";
+
+  function setParams(updates: Record<string, string | null>) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(updates)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      return next;
+    }, { replace: true });
+  }
+
+  const filteredSchedules = useMemo(
+    () =>
+      schedules.filter(
+        (s) =>
+          (!filterAction || s.action === filterAction) &&
+          (!filterStatus ||
+            (filterStatus === "active" ? s.is_active : !s.is_active)),
+      ),
+    [schedules, filterAction, filterStatus],
+  );
+
+  const hasActiveFilter = filterAction || filterStatus;
   const [form, setForm] = useState<ScheduleFormData>(defaultForm());
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-
-  function showToast(msg: string, type: "error" | "success" = "error") {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
-  }
 
   async function load() {
     setLoading(true);
@@ -224,7 +245,7 @@ export function SchedulePage() {
       setModal(null);
       await load();
     } catch (err) {
-      showToast(`Gagal menyimpan: ${err instanceof Error ? err.message : err}`);
+      toast.error(`Gagal menyimpan: ${err instanceof Error ? err.message : err}`);
     } finally {
       setSaving(false);
     }
@@ -242,7 +263,7 @@ export function SchedulePage() {
       await api.deleteSchedule(id);
       await load();
     } catch (err) {
-      showToast(`Gagal menghapus: ${err instanceof Error ? err.message : err}`);
+      toast.error(`Gagal menghapus: ${err instanceof Error ? err.message : err}`);
     }
   }
 
@@ -251,18 +272,83 @@ export function SchedulePage() {
       const updated = await api.toggleSchedule(id);
       setSchedules((prev) => prev.map((s) => (s.id === id ? updated : s)));
     } catch (err) {
-      showToast(`Gagal: ${err instanceof Error ? err.message : err}`);
+      toast.error(`Gagal: ${err instanceof Error ? err.message : err}`);
     }
   }
 
-  function formatTime(h: number, m: number) {
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  }
-
-  function formatDays(days: number[]) {
-    if (days.length === 0) return "Setiap hari";
-    return days.map((d) => DAYS[d]).join(", ");
-  }
+  const columns = useMemo<ColumnDef<Schedule>[]>(
+    () => [
+      {
+        accessorKey: "label",
+        header: "Label",
+        cell: ({ row }) => <span className="font-medium">{row.original.label}</span>,
+        enableSorting: true,
+      },
+      {
+        id: "action",
+        header: "Tindakan",
+        cell: ({ row }) => (
+          <Badge
+            className={
+              row.original.action === "open"
+                ? "bg-green-100 text-green-700 border-transparent"
+                : "bg-red-100 text-red-700 border-transparent"
+            }
+          >
+            {row.original.action === "open" ? "Buka" : "Tutup"}
+          </Badge>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: "time",
+        header: "Waktu",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap">
+            {formatTime(row.original.hour, row.original.minute)}
+          </span>
+        ),
+        sortingFn: (a, b) =>
+          a.original.hour * 60 + a.original.minute - (b.original.hour * 60 + b.original.minute),
+        enableSorting: true,
+      },
+      {
+        id: "days",
+        header: "Hari",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground text-xs">{formatDays(row.original.days)}</span>
+        ),
+        enableSorting: false,
+      },
+      {
+        id: "actions",
+        header: "",
+        cell: ({ row }) => (
+          <div className="flex gap-3 justify-end">
+            <Button
+              variant="link"
+              size="xs"
+              onClick={() => openEdit(row.original)}
+              className="text-xs text-blue-600 h-auto p-0"
+            >
+              Edit
+            </Button>
+            <Button
+              variant="link"
+              size="xs"
+              onClick={() => handleDelete(row.original.id)}
+              className="text-xs text-red-500 h-auto p-0"
+            >
+              Hapus
+            </Button>
+          </div>
+        ),
+        enableSorting: false,
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   return (
     <div className="space-y-4">
@@ -286,112 +372,128 @@ export function SchedulePage() {
         </Alert>
       )}
 
-      {toast && (
-        <Alert variant={toast.type === "error" ? "destructive" : "default"}>
-          <AlertDescription>{toast.msg}</AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Jadwal</h2>
-        <Button onClick={openCreate}>+ Tambah</Button>
+        <Button size="sm" onClick={openCreate}>Tambah Jadwal</Button>
       </div>
 
-      <Card>
+      <div className="flex gap-2 flex-wrap items-center">
+        <Select
+          value={filterAction || "_all"}
+          onValueChange={(v) => setParams({ action: v != null && v !== "_all" ? v : null })}
+        >
+          <SelectTrigger size="sm" className="w-auto">
+            <SelectValue>{(v) => ({ _all: "Semua Tindakan", open: "Buka", close: "Tutup" }[v as string] ?? "Semua Tindakan")}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">Semua Tindakan</SelectItem>
+            <SelectItem value="open">Buka</SelectItem>
+            <SelectItem value="close">Tutup</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filterStatus || "_all"}
+          onValueChange={(v) => setParams({ status: v != null && v !== "_all" ? v : null })}
+        >
+          <SelectTrigger size="sm" className="w-auto">
+            <SelectValue>{(v) => ({ _all: "Semua Status", active: "Aktif", inactive: "Nonaktif" }[v as string] ?? "Semua Status")}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">Semua Status</SelectItem>
+            <SelectItem value="active">Aktif</SelectItem>
+            <SelectItem value="inactive">Nonaktif</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasActiveFilter && (
+          <Button variant="outline" size="sm" onClick={() => setParams({ action: null, status: null })}>
+            Reset Filter
+          </Button>
+        )}
+      </div>
+
+      <Card className="py-0">
         <CardContent className="p-0">
-          {loading ? (
-            <div className="h-[480px] flex items-center justify-center text-sm text-muted-foreground">
-              Memuat...
-            </div>
-          ) : schedules.length === 0 ? (
-            <div className="h-[480px] flex items-center justify-center text-sm text-muted-foreground">
-              Belum ada jadwal
-            </div>
-          ) : (
-            <div className="h-[480px] overflow-y-auto [&>[data-slot=table-container]]:overflow-x-visible">
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-card">
-                  <TableRow>
-                    <TableHead className="w-12">Aktif</TableHead>
-                    <TableHead>Label</TableHead>
-                    <TableHead>Tindakan</TableHead>
-                    <TableHead>Waktu</TableHead>
-                    <TableHead>Hari</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {schedules.map((s) => (
-                    <TableRow key={s.id} className={s.is_active ? "" : "opacity-50"}>
-                      <TableCell>
-                        <Switch checked={s.is_active} onCheckedChange={() => handleToggle(s.id)} />
-                      </TableCell>
-                      <TableCell className="font-medium">{s.label}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            s.action === "open"
-                              ? "bg-green-100 text-green-700 border-transparent"
-                              : "bg-red-100 text-red-700 border-transparent"
-                          }
-                        >
-                          {s.action === "open" ? "Buka" : "Tutup"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatTime(s.hour, s.minute)}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-xs">
-                        {formatDays(s.days)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-3 justify-end">
-                          <Button
-                            variant="link"
-                            size="xs"
-                            onClick={() => openEdit(s)}
-                            className="text-xs text-blue-600 h-auto p-0"
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="link"
-                            size="xs"
-                            onClick={() => handleDelete(s.id)}
-                            className="text-xs text-red-500 h-auto p-0"
-                          >
-                            Hapus
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            columns={columns}
+            data={filteredSchedules}
+            loading={loading}
+            emptyMessage="Belum ada jadwal"
+            getRowClassName={(s) => (s.is_active ? "" : "opacity-50")}
+          />
         </CardContent>
       </Card>
 
-      <Dialog
+      <Sheet
         open={modal !== null}
         onOpenChange={(open) => {
           if (!open) setModal(null);
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{modal === "create" ? "Tambah Jadwal" : "Edit Jadwal"}</DialogTitle>
-          </DialogHeader>
-          <ScheduleModal
-            form={form}
-            setForm={setForm}
-            onSubmit={handleSubmit}
-            onClose={() => setModal(null)}
-            saving={saving}
-          />
-        </DialogContent>
-      </Dialog>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{modal === "create" ? "Tambah Jadwal" : "Edit Jadwal"}</SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto flex-1">
+            <ScheduleModal
+              form={form}
+              setForm={setForm}
+              onSubmit={handleSubmit}
+              onClose={() => setModal(null)}
+              saving={saving}
+            />
+            {typeof modal === "number" && (
+              <div className="-mx-6 px-6 border-t mt-2 divide-y">
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {form.is_active ? "Nonaktifkan" : "Aktifkan"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {form.is_active
+                        ? "Jadwal tidak akan berjalan sementara"
+                        : "Aktifkan kembali jadwal ini"}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={async () => {
+                      await handleToggle(modal);
+                      setForm((f) => ({ ...f, is_active: !f.is_active }));
+                    }}
+                  >
+                    {form.is_active ? "Nonaktifkan" : "Aktifkan"}
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between gap-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium">Hapus jadwal</p>
+                    <p className="text-xs text-muted-foreground">
+                      Tindakan ini tidak bisa dibatalkan
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setModal(null);
+                      handleDelete(modal);
+                    }}
+                  >
+                    Hapus
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

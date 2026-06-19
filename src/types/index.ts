@@ -38,6 +38,14 @@ export interface Schedule {
   updated_at: string;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+}
+
 export interface LogsResponse {
   data: Log[];
   pagination: {

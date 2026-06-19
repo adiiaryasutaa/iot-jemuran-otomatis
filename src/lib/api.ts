@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Config, LogsResponse, Schedule, Status } from "../types";
+import type { AdminUser, Config, LogsResponse, Schedule, Status } from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
@@ -37,9 +37,11 @@ export const api = {
   postCommand: (command: "open" | "close") =>
     request("/api/command", { method: "POST", body: JSON.stringify({ command }) }),
 
-  getLogs: (page = 1, limit = 30, source?: string) => {
+  getLogs: (page = 1, limit = 30, source?: string, dateFrom?: string, dateTo?: string) => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (source) params.set("source", source);
+    if (dateFrom) params.set("date_from", dateFrom);
+    if (dateTo) params.set("date_to", dateTo);
     return request<LogsResponse>(`/api/logs?${params}`);
   },
 
@@ -51,4 +53,12 @@ export const api = {
   deleteSchedule: (id: number) => request<void>(`/api/schedule/${id}`, { method: "DELETE" }),
   toggleSchedule: (id: number) =>
     request<Schedule>(`/api/schedule/${id}/toggle`, { method: "PATCH" }),
+
+  getUsers: () => request<AdminUser[]>("/api/users"),
+  inviteUser: (email: string) =>
+    request<{ ok: boolean }>("/api/users/invite", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  deleteUser: (id: string) => request<{ ok: boolean }>(`/api/users/${id}`, { method: "DELETE" }),
 };

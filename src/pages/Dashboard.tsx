@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import type { Log, Schedule } from "../types";
 import { useStatus } from "../context/StatusContext";
@@ -84,7 +85,6 @@ function formatUntil(m: number): string {
 export function Dashboard() {
   const { status, error, inCooldown, markAction, mode, setMode } = useStatus();
   const [cmdLoading, setCmdLoading] = useState<"open" | "close" | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [logs, setLogs] = useState<Log[] | null>(null);
   const [schedules, setSchedules] = useState<Schedule[] | null>(null);
 
@@ -104,13 +104,11 @@ export function Dashboard() {
     try {
       await api.postCommand(command);
       markAction();
-      setToast(
+      toast.success(
         `Perintah "${command === "open" ? "Buka" : "Tutup"}" terkirim — berlaku dalam ~3 detik`,
       );
-      setTimeout(() => setToast(null), 4000);
     } catch (e) {
-      setToast(`Gagal: ${e instanceof Error ? e.message : "error tidak diketahui"}`);
-      setTimeout(() => setToast(null), 4000);
+      toast.error(`Gagal: ${e instanceof Error ? e.message : "error tidak diketahui"}`);
     } finally {
       setCmdLoading(null);
     }
@@ -133,12 +131,6 @@ export function Dashboard() {
       {error && (
         <Alert variant="destructive">
           <AlertDescription>Gagal memuat status: {error}</AlertDescription>
-        </Alert>
-      )}
-
-      {toast && (
-        <Alert>
-          <AlertDescription>{toast}</AlertDescription>
         </Alert>
       )}
 
@@ -194,7 +186,7 @@ export function Dashboard() {
                   key={m}
                   type="button"
                   onClick={() => setMode(m)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`cursor-pointer px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                     mode === m
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"

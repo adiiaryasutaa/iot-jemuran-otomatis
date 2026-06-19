@@ -1,5 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 
 export async function userAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = req.headers["authorization"];
@@ -16,5 +25,6 @@ export async function userAuth(req: Request, res: Response, next: NextFunction):
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  req.user = user;
   next();
 }
