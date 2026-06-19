@@ -421,6 +421,7 @@ export function SchedulePage() {
             loading={loading}
             emptyMessage="Belum ada jadwal"
             getRowClassName={(s) => (s.is_active ? "" : "opacity-50")}
+            pageSize={10}
           />
         </CardContent>
       </Card>

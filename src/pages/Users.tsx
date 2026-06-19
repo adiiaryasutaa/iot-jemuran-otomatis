@@ -1,5 +1,6 @@
 import { type ColumnDef } from "@tanstack/react-table";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api } from "../lib/api";
 import type { AdminUser } from "../types";
@@ -62,12 +63,36 @@ function formatWITA(iso: string | null): string {
 
 export function UsersPage() {
   const { user: currentUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const filterSearch = searchParams.get("q") ?? "";
+
+  function setParams(updates: Record<string, string | null>) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [k, v] of Object.entries(updates)) {
+        if (v === null || v === "") next.delete(k);
+        else next.set(k, v);
+      }
+      return next;
+    }, { replace: true });
+  }
+
+  const filteredUsers = useMemo(() => {
+    if (!filterSearch) return users;
+    const q = filterSearch.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.email.toLowerCase().includes(q) ||
+        (u.full_name?.toLowerCase().includes(q) ?? false),
+    );
+  }, [users, filterSearch]);
 
   async function load() {
     setLoading(true);
@@ -212,13 +237,28 @@ export function UsersPage() {
         </Button>
       </div>
 
+      <div className="flex gap-2 flex-wrap items-center">
+        <Input
+          value={filterSearch}
+          onChange={(e) => setParams({ q: e.target.value || null })}
+          placeholder="Cari nama atau email..."
+          className="h-8 w-56 text-sm"
+        />
+        {filterSearch && (
+          <Button variant="outline" size="sm" onClick={() => setParams({ q: null })}>
+            Reset Filter
+          </Button>
+        )}
+      </div>
+
       <Card className="py-0">
         <CardContent className="p-0">
           <DataTable
             columns={columns}
-            data={users}
+            data={filteredUsers}
             loading={loading}
             emptyMessage="Belum ada pengguna"
+            pageSize={10}
           />
         </CardContent>
       </Card>
