@@ -1,6 +1,10 @@
 import { Router } from "express";
+import type { Request } from "express";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { userAuth } from "../middleware/userAuth";
+
+type AuthedRequest = Request & { user?: User };
 
 const router = Router();
 
@@ -34,7 +38,7 @@ router.post("/invite", userAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
-router.delete("/:id", userAuth, async (req, res) => {
+router.delete("/:id", userAuth, async (req: AuthedRequest, res) => {
   const id = String(req.params["id"]);
   if (req.user?.id === id) {
     res.status(400).json({ error: "Tidak dapat menghapus akun sendiri" });
