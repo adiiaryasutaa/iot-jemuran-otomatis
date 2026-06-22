@@ -90,12 +90,12 @@ router.get("/run", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  // WITA = UTC+8
+  // WIB = UTC+7
   const now = new Date();
-  const wita = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  const hour = wita.getUTCHours();
-  const minute = wita.getUTCMinutes();
-  const day = wita.getUTCDay(); // 0=Sun … 6=Sat
+  const wib = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  const hour = wib.getUTCHours();
+  const minute = wib.getUTCMinutes();
+  const day = wib.getUTCDay(); // 0=Sun … 6=Sat
 
   const { data: schedules, error } = await supabase
     .from("schedules")

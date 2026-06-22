@@ -14,6 +14,7 @@ dist-ssr
 
 # Secrets — jangan di-commit
 .env
+.env.prod
 .mcp.json
 firmware/credentials.h
 
