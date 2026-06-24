@@ -39,18 +39,26 @@ bool readRainRaw() {
   return digitalRead(Pin::RAIN_SENSOR) == (cfg.rain_active_low ? LOW : HIGH);
 }
 
+static int servoAngle = -1; // last commanded angle; -1 = unknown (not yet moved)
+
 void applyState(bool isRaining) {
   int target = isRaining ? cfg.angle_closed : cfg.angle_open;
 
-  if (strcmp(cfg.servo_speed, "slow") == 0) {
-    int cur = canopyServo.read();
-    int dir = (target > cur) ? 1 : -1;
-    for (int a = cur; a != target; a += dir) {
+  canopyServo.setPeriodHertz(50);
+  canopyServo.attach(Pin::SERVO, 500, 2400);
+
+  if (strcmp(cfg.servo_speed, "slow") == 0 && servoAngle >= 0) {
+    int dir = (target > servoAngle) ? 1 : -1;
+    for (int a = servoAngle; a != target; a += dir) {
       canopyServo.write(a);
       delay(SERVO_SLOW_STEP_MS);
     }
   }
   canopyServo.write(target);
+  servoAngle = target;
+
+  delay(SERVO_SETTLE_MS);  // let servo reach target before releasing
+  canopyServo.detach();    // cut holding current to reduce idle draw / buzz
 
   ledPlaySequence(SEQ_SERVO, COUNTOF(SEQ_SERVO), 1);
 }

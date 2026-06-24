@@ -13,6 +13,7 @@ constexpr unsigned long COMMAND_POLL_INTERVAL   = 3000;   // ms
 constexpr unsigned long CONFIG_REFRESH_INTERVAL = 15000;  // ms — mode switch takes effect within this window
 constexpr unsigned long SENSOR_COOLDOWN_MS      = 30000;  // ms — min gap between sensor-triggered state changes
 constexpr unsigned long SERVO_SLOW_STEP_MS      = 15;     // ms per 1° when servo_speed == "slow"
+constexpr unsigned long SERVO_SETTLE_MS         = 400;    // ms to let servo reach target before detach
 
 // Runtime config fetched from API; all fields have safe defaults.
 struct DeviceConfig {

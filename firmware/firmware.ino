@@ -1,5 +1,7 @@
 #include <ESP32Servo.h>
 #include <WiFi.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 #include "credentials.h"  // copy from credentials.h.example and fill in values
 #include "config.h"
 #include "hardware.h"
@@ -32,6 +34,11 @@ static void triggerState(bool isRaining, const char* statusMode, const char* log
 }
 
 void setup() {
+  // Disable brownout reset: servo current spikes sag the 5V rail and would
+  // otherwise reboot the chip mid-move. Masks weak power — add a bulk cap /
+  // separate 5V supply for a real fix.
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
   Serial.begin(115200);
   delay(200);
 
