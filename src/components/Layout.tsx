@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 const navItems = [
   { to: "/", label: "Dashboard" },
-  { to: "/schedule", label: "Jadwal" },
+  // { to: "/schedule", label: "Jadwal" }, // hidden — schedule pipeline WIP, not deleted
   { to: "/config", label: "Konfigurasi" },
   { to: "/logs", label: "Riwayat" },
   { to: "/users", label: "Pengguna" },
