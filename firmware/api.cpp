@@ -1,8 +1,22 @@
 #include "api.h"
 #include "hardware.h"
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+
+static WiFiClient       plainClient;
+static WiFiClientSecure secureClient;
+
+// Opens http(s) connection picking the right client by URL scheme.
+// https:// → TLS without cert validation (setInsecure); http:// → plain.
+static bool httpBegin(HTTPClient& http, const char* url) {
+  if (strncmp(url, "https:", 6) == 0) {
+    secureClient.setInsecure();
+    return http.begin(secureClient, url);
+  }
+  return http.begin(plainClient, url);
+}
 
 // Returns response body, or "" on failure.
 static String apiGet(const char* path) {
@@ -10,10 +24,10 @@ static String apiGet(const char* path) {
 
   char url[192];
   snprintf(url, sizeof(url), "%s%s", API_BASE, path);
-  
+
   HTTPClient http;
   http.setTimeout(5000);
-  http.begin(url);
+  httpBegin(http, url);
   http.addHeader("x-api-key", API_KEY);
   
   int code = http.GET();
@@ -33,7 +47,7 @@ static bool apiSend(const char* method, const char* path, const char* body) {
   
   HTTPClient http;
   http.setTimeout(5000);
-  http.begin(url);
+  httpBegin(http, url);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("x-api-key", API_KEY);
   
