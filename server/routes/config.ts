@@ -27,6 +27,7 @@ router.put("/", userAuth, async (req: Request, res: Response): Promise<void> => 
     led_blink_ms,
     cooldown_ms,
     mode,
+    servo_speed,
   } = req.body;
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
@@ -69,6 +70,13 @@ router.put("/", userAuth, async (req: Request, res: Response): Promise<void> => 
       return;
     }
     updates.mode = mode;
+  }
+  if (servo_speed !== undefined) {
+    if (!["slow", "fast"].includes(servo_speed)) {
+      res.status(400).json({ error: 'servo_speed must be "slow" or "fast"' });
+      return;
+    }
+    updates.servo_speed = servo_speed;
   }
 
   const { data, error } = await supabase

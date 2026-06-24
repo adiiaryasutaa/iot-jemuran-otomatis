@@ -16,6 +16,7 @@ export interface Config {
   led_blink_ms: number;
   cooldown_ms: number;
   mode: "auto" | "manual";
+  servo_speed: "slow" | "fast";
   updated_at: string;
 }
 

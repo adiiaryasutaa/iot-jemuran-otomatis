@@ -40,7 +40,18 @@ bool readRainRaw() {
 }
 
 void applyState(bool isRaining) {
-  canopyServo.write(isRaining ? cfg.angle_closed : cfg.angle_open);
+  int target = isRaining ? cfg.angle_closed : cfg.angle_open;
+
+  if (strcmp(cfg.servo_speed, "slow") == 0) {
+    int cur = canopyServo.read();
+    int dir = (target > cur) ? 1 : -1;
+    for (int a = cur; a != target; a += dir) {
+      canopyServo.write(a);
+      delay(SERVO_SLOW_STEP_MS);
+    }
+  }
+  canopyServo.write(target);
+
   ledPlaySequence(SEQ_SERVO, COUNTOF(SEQ_SERVO), 1);
 }
 

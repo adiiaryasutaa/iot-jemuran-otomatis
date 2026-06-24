@@ -26,6 +26,7 @@ export function ConfigPage() {
           debounce_ms: cfg.debounce_ms,
           rain_active: cfg.rain_active,
           cooldown_ms: cfg.cooldown_ms,
+          servo_speed: cfg.servo_speed,
         });
         setLoading(false);
       })
@@ -101,6 +102,28 @@ export function ConfigPage() {
                 onChange={(e) => set("angle_closed", Number(e.target.value.replace(/[^0-9]/g, "")))}
               />
             </div>
+          </div>
+          <div className="space-y-2 mt-4">
+            <p className="text-xs font-medium text-gray-600">Kecepatan Servo</p>
+            <div className="inline-flex rounded-lg border p-0.5">
+              {(["slow", "fast"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => set("servo_speed", s)}
+                  className={`cursor-pointer px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    draft.servo_speed === s
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s === "slow" ? "Lambat" : "Cepat"}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Lambat = servo berputar bertahap; Cepat = langsung ke posisi
+            </p>
           </div>
         </CardContent>
       </Card>

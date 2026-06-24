@@ -84,11 +84,16 @@ bool fetchConfig() {
     strlcpy(cfg.mode, doc["mode"].as<const char*>(), sizeof(cfg.mode));
   }
 
+  if (doc["servo_speed"].is<const char*>()) {
+    strlcpy(cfg.servo_speed, doc["servo_speed"].as<const char*>(), sizeof(cfg.servo_speed));
+  }
+
   bool changed = old.angle_open      != cfg.angle_open
               || old.angle_closed    != cfg.angle_closed
               || old.debounce_ms     != cfg.debounce_ms
               || old.rain_active_low != cfg.rain_active_low
-              || strcmp(old.mode, cfg.mode) != 0;
+              || strcmp(old.mode, cfg.mode) != 0
+              || strcmp(old.servo_speed, cfg.servo_speed) != 0;
 
   Serial.println(changed ? F("[Config] updated") : F("[Config] unchanged"));
   if (changed) ledSignalConfig();
