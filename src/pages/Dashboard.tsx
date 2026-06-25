@@ -245,6 +245,8 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
+        {/* schedule card hidden — pipeline WIP, not deleted */}
+        {false && (
         <Card>
           <CardContent>
             <div className="flex items-center justify-between mb-3">
@@ -291,6 +293,7 @@ export function Dashboard() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
